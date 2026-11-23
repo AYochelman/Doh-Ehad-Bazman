@@ -44,6 +44,8 @@
     border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
   }
   textarea { min-height: 96px; resize: vertical; }
+  /* iOS gives date inputs an intrinsic width that ignores the container, and RTL scrambles the date parts. */
+  input[type=datetime-local] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; min-height: 46px; direction: ltr; text-align: right; }
   input[type=tel], .ltr { direction: ltr; text-align: left; unicode-bidi: isolate; }
   button {
     font: inherit; font-weight: 500; border-radius: 10px; border: 1px solid var(--line);
@@ -84,9 +86,9 @@
       <input class="grow" id="qPhone" type="tel" inputmode="tel" placeholder="050-1234567" autocomplete="off">
       <button id="qAdd">הוספה</button>
     </div>
-    <div class="row">
-      <div class="grow"><label for="sWhen">מתי</label><input id="sWhen" type="datetime-local"></div>
-      <div class="grow"><label for="sRepeat">חזרה</label>
+    <div>
+      <div><label for="sWhen">מתי</label><input id="sWhen" type="datetime-local"></div>
+      <div><label for="sRepeat">חזרה</label>
         <select id="sRepeat">
           <option value="once">חד פעמי</option><option value="daily">כל יום</option>
           <option value="weekly">כל שבוע</option><option value="monthly">כל חודש</option>
