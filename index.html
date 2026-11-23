@@ -141,6 +141,8 @@
     <input id="lName" autocomplete="off">
     <label>מי ברשימה</label>
     <div class="chips" id="lPick"></div>
+    <label for="lWa">שם רשימת התפוצה המקבילה בוואטסאפ (לא חובה)</label>
+    <input id="lWa" autocomplete="off" placeholder="למשל: מחלקה א">
     <p class="muted" id="lErr" role="alert"></p>
     <button class="primary" id="lSave">שמירת הרשימה</button>
   </div>
@@ -331,6 +333,8 @@ function renderHome() {
       <div class="msg">${esc(s.text)}</div>
       <button class="primary" data-sms="${s.id}">${left.length > 1 ? `SMS לכולם בבת אחת (${left.length})` : `SMS ל${esc(left[0]?.name || "")}`}</button>
       <p class="muted" style="margin:8px 0 12px">אפליקציית ההודעות תיפתח עם ${left.length > 1 ? "כל המספרים" : "המספר"} וההודעה, ושולחים בלחיצה אחת. עובד גם למספרים שלא שמורים בטלפון.</p>
+      ${left.length > 1 ? `<button data-bc="${s.id}">וואטסאפ לרשימת תפוצה${waNames(s) ? ": " + esc(waNames(s)) : ""}</button>
+      <p class="muted" style="margin:8px 0 12px">ההודעה מועתקת ווואטסאפ נפתח. בוחרים שם את רשימת התפוצה ושולחים; אם היא לא מופיעה לבחירה, פותחים אותה ומדביקים.</p>` : ""}
       <div class="muted">או בוואטסאפ, אחד אחד:</div>
       <div class="chips">${left.map((c) => `<button data-send="${s.id}" data-c="${c.id}">וואטסאפ ל${esc(c.name)}</button>`).join("")}</div>
       <button class="link" data-skip="${s.id}">דילוג על הפעם הזאת</button></div>`;
@@ -361,7 +365,9 @@ function renderLists() {
   $("lists").innerHTML = db.lists.map((l) =>
     `<div class="card"><div class="row"><strong class="grow">${esc(l.name)}</strong><span class="muted">${l.ids.filter(contact).length} אנשים</span>
      <button class="link" data-del-l="${l.id}">מחיקה</button></div>
-     <div class="muted">${esc(l.ids.map(contact).filter(Boolean).map((c) => c.name).join(", "))}</div></div>`).join("")
+     <div class="muted">${esc(l.ids.map(contact).filter(Boolean).map((c) => c.name).join(", "))}</div>
+     ${l.wa ? `<div class="muted">רשימת תפוצה בוואטסאפ: <strong>${esc(l.wa)}</strong></div>` : ""}
+     <button data-vcf="${l.id}" style="margin-top:10px">שמירת אנשי הרשימה באנשי הקשר של הטלפון</button></div>`).join("")
     || '<div class="empty">עוד אין רשימות.</div>';
 }
 function renderTpls() {
@@ -502,6 +508,28 @@ function sendSms(s) {
   db.log.length = Math.min(db.log.length, 100);
   finishOccurrence(s);
 }
+// WhatsApp has no link that targets a broadcast list, so the app can only open WhatsApp with the text
+// (and copy it, in case the list is not offered in WhatsApp's picker) and name the list to choose.
+const waNames = (s) => s.lists.map((id) => db.lists.find((l) => l.id === id)?.wa).filter(Boolean).join(", ");
+function sendBroadcast(s) {
+  const left = recipients(s).filter((c) => !s.sent[c.id]);
+  const text = s.text.replace(/[ \t]*\{שם\}/g, "").replace(/^[ \t]+/gm, "");
+  navigator.clipboard?.writeText(text).catch(() => {});
+  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+  db.log.unshift({ t: Date.now(), name: `רשימת תפוצה בוואטסאפ (${left.length})`, text });
+  db.log.length = Math.min(db.log.length, 100);
+  finishOccurrence(s);
+}
+// A WhatsApp broadcast list can only hold saved contacts, so a list can be exported to the phone book in one go.
+function exportVcf(l) {
+  const v = (x) => x.replace(/\\/g, "\\\\").replace(/([,;])/g, "\\$1");
+  const cards = l.ids.map(contact).filter(Boolean).map((c) =>
+    ["BEGIN:VCARD", "VERSION:3.0", "FN:" + v(c.name), "N:" + v(c.name) + ";;;;", "TEL;TYPE=CELL:" + showPhone(c.phone), "END:VCARD"].join("\r\n"));
+  const a = document.createElement("a");
+  a.href = "data:text/vcard;charset=utf-8," + encodeURIComponent(cards.join("\r\n"));
+  a.download = "doh1-contacts.vcf";
+  document.body.append(a); a.click(); a.remove();
+}
 // Sending now makes the message due at once; the ready card is where SMS or WhatsApp is chosen.
 $("sNow").onclick = () => {
   const text = $("sText").value.trim(), now = Date.now();
@@ -521,8 +549,8 @@ $("lSave").onclick = () => {
   const err = !name ? "חסר שם לרשימה." : !picked.l.size ? "צריך לבחור לפחות אדם אחד." : "";
   $("lErr").textContent = err;
   if (err) return;
-  db.lists.push({ id: uid(), name, ids: [...picked.l] });
-  picked.l.clear(); $("lName").value = "";
+  db.lists.push({ id: uid(), name, ids: [...picked.l], wa: $("lWa").value.trim() });
+  picked.l.clear(); $("lName").value = $("lWa").value = "";
   renderAll();
 };
 $("tSave").onclick = () => {
@@ -537,7 +565,9 @@ document.addEventListener("click", (e) => {
   const d = e.target.dataset;
   if (d.send) {
     sendTo(db.schedules.find((x) => x.id === d.send), contact(d.c));
-  } else if (d.sms) sendSms(db.schedules.find((x) => x.id === d.sms));
+  } else if (d.bc) sendBroadcast(db.schedules.find((x) => x.id === d.bc));
+  else if (d.vcf) { exportVcf(db.lists.find((x) => x.id === d.vcf)); return; }
+  else if (d.sms) sendSms(db.schedules.find((x) => x.id === d.sms));
   else if (d.ics) { addToCalendar(db.schedules.find((x) => x.id === d.ics)); return; }
   else if (d.skip) finishOccurrence(db.schedules.find((x) => x.id === d.skip));
   else if (d.delS) { if (!confirm("למחוק את התזמון?")) return; db.schedules = db.schedules.filter((x) => x.id !== d.delS); }
@@ -564,7 +594,7 @@ function exportCode(withSchedules) {
   const phone = (id) => contact(id)?.phone;
   const data = {
     contacts: db.contacts.map(({ name, phone }) => ({ name, phone })),
-    lists: db.lists.map((l) => ({ name: l.name, phones: l.ids.map(phone).filter(Boolean) })),
+    lists: db.lists.map((l) => ({ name: l.name, wa: l.wa || "", phones: l.ids.map(phone).filter(Boolean) })),
     templates: db.templates.map(({ title, text }) => ({ title, text })),
     schedules: !withSchedules ? [] : db.schedules.filter((x) => !x.done).map((x) => ({
       text: x.text, repeat: x.repeat, anchor: x.anchor, phones: x.to.map(phone).filter(Boolean),
@@ -592,15 +622,15 @@ function importCode(code) {
     return c.id;
   };
   arr(data.contacts).forEach((c) => idOf(c?.phone, c?.name));
-  const listId = (name, phones) => {
+  const listId = (name, phones, wa) => {
     name = str(name);
     if (!name) return null;
     let l = db.lists.find((x) => x.name === name);
-    if (!l) { l = { id: uid(), name, ids: [] }; db.lists.push(l); n.lists++; }
+    if (!l) { l = { id: uid(), name, ids: [], wa: str(wa) }; db.lists.push(l); n.lists++; }
     arr(phones).forEach((p) => { const id = idOf(p); if (id && !l.ids.includes(id)) l.ids.push(id); });
     return l.id;
   };
-  arr(data.lists).forEach((l) => listId(l?.name, l?.phones));
+  arr(data.lists).forEach((l) => listId(l?.name, l?.phones, l?.wa));
   arr(data.templates).forEach((t) => {
     const title = str(t?.title), text = str(t?.text);
     if (!title || !text || db.templates.some((x) => x.title === title && x.text === text)) return;
