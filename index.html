@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="דוח 1 בזמן">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#ffffff">
+<title>דוח 1 בזמן</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #ffffff; --card: #ffffff; --field: #faf8f0; --text: #1c1b17; --muted: #6b675c; --line: #ebe7d9;
+    --accent: #ffd60a; --on-accent: #1c1b17; --soft: #fff7cc; --danger: #b3261e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; direction: rtl; background: var(--bg); color: var(--text);
+    font-family: "Heebo", "Segoe UI", "Arial Hebrew", Arial, sans-serif; line-height: 1.5;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  main { max-width: 620px; margin-inline: auto; padding: 16px; }
+  h1 { font-size: 1.35rem; margin: 4px 0 14px; }
+  .brand { margin-bottom: 14px; }
+  .brand img { border-radius: 13px; }
+  .brand h1 { margin: 0; }
+  h2 { font-size: 1rem; margin: 22px 0 8px; color: var(--muted); font-weight: 500; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  :focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
+  .due { border-color: var(--accent); background: var(--soft); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; min-width: 0; }
+  .muted { color: var(--muted); font-size: .88rem; }
+  .msg { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 10px; }
+  label { display: block; font-size: .88rem; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea, select {
+    width: 100%; font: inherit; color: inherit; background: var(--field);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+  }
+  textarea { min-height: 96px; resize: vertical; }
+  input[type=tel], .ltr { direction: ltr; text-align: left; unicode-bidi: isolate; }
+  button {
+    font: inherit; font-weight: 500; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); padding: 10px 14px; min-height: 44px; cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  button.link { border: 0; background: none; color: var(--danger); padding: 8px; min-height: 44px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border-radius: 999px; padding: 6px 12px; min-height: 36px; font-size: .92rem; }
+  .chip[aria-pressed=true] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .empty { color: var(--muted); text-align: center; padding: 22px 8px; }
+  nav {
+    position: fixed; inset-inline: 0; bottom: 0; display: flex; background: var(--card);
+    border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav button { flex: 1; border: 0; border-radius: 0; background: none; color: var(--muted); min-height: 60px; font-size: .9rem; }
+  nav button[aria-current=page] { color: var(--text); font-weight: 700; box-shadow: inset 0 4px 0 var(--accent); }
+  section[hidden] { display: none; }
+</style>
+</head>
+<body>
+<main dir="rtl" lang="he">
+
+<section id="tab-home">
+  <div class="row brand"><img src="data:image/jpeg;base64,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" alt="" width="56" height="56"><h1>דוח 1 בזמן</h1></div>
+  <div id="dueBox"></div>
+  <h2>הודעה מתוזמנת חדשה</h2>
+  <div class="card">
+    <label for="sTpl">הודעה מוכנה</label>
+    <select id="sTpl"></select>
+    <label for="sText">נוסח ההודעה (<span class="ltr">{שם}</span> יוחלף בשם הנמען)</label>
+    <textarea id="sText"></textarea>
+    <label>נמענים</label>
+    <div class="chips" id="sPick"></div>
+    <label for="qPhone">מספר חדש - שם ומספר, יישמר לבחירה מהירה</label>
+    <div class="row">
+      <input class="grow" id="qName" placeholder="שם" autocomplete="off">
+      <input class="grow" id="qPhone" type="tel" inputmode="tel" placeholder="050-1234567" autocomplete="off">
+      <button id="qAdd">הוספה</button>
+    </div>
+    <div class="row">
+      <div class="grow"><label for="sWhen">מתי</label><input id="sWhen" type="datetime-local"></div>
+      <div class="grow"><label for="sRepeat">חזרה</label>
+        <select id="sRepeat">
+          <option value="once">חד פעמי</option><option value="daily">כל יום</option>
+          <option value="weekly">כל שבוע</option><option value="monthly">כל חודש</option>
+          <option value="yearly">כל שנה</option>
+        </select></div>
+    </div>
+    <p class="muted" id="sErr" role="alert"></p>
+    <button class="primary" id="sSave">שמירת התזמון</button>
+  </div>
+  <h2>מתוזמנות</h2>
+  <div id="upcoming"></div>
+  <h2>נשלחו לאחרונה</h2>
+  <div id="log"></div>
+</section>
+
+<section id="tab-people" hidden>
+  <h1>אנשים ומספרים</h1>
+  <p class="muted">שמות שנשמרים כאן, באפליקציה בלבד. לא צריך לשמור את המספר באנשי הקשר של הטלפון.</p>
+  <div class="card">
+    <div class="row">
+      <input class="grow" id="cName" placeholder="שם" autocomplete="off">
+      <input class="grow" id="cPhone" type="tel" inputmode="tel" placeholder="050-1234567" autocomplete="off">
+      <button class="primary" id="cAdd">הוספה</button>
+    </div>
+    <label for="cBulk">הדבקת רשימה - שורה לכל אחד: שם, מספר</label>
+    <textarea id="cBulk" placeholder="דנה, 050-1234567"></textarea>
+    <p class="muted" id="cErr" role="alert"></p>
+    <button id="cBulkAdd">הוספת הרשימה</button>
+    <label for="oFile">ייבוא מתמונה - צילום מסך של אקסל, או כל תמונה שיש בה מספר</label>
+    <input id="oFile" type="file" accept="image/*" multiple>
+    <p class="muted" id="oMsg" role="status">הקריאה נעשית בטלפון. התמונה לא נשלחת לשום מקום.</p>
+    <div id="oRows"></div>
+    <button class="primary" id="oSave" hidden>שמירת מה שנקרא</button>
+  </div>
+  <input id="cSearch" type="search" placeholder="חיפוש לפי שם או מספר">
+  <div id="people" style="margin-top:10px"></div>
+</section>
+
+<section id="tab-lists" hidden>
+  <h1>רשימות תפוצה</h1>
+  <p class="muted">כל נמען ברשימה מקבל הודעה פרטית נפרדת.</p>
+  <div class="card">
+    <label for="lName">שם הרשימה</label>
+    <input id="lName" autocomplete="off">
+    <label>מי ברשימה</label>
+    <div class="chips" id="lPick"></div>
+    <p class="muted" id="lErr" role="alert"></p>
+    <button class="primary" id="lSave">שמירת הרשימה</button>
+  </div>
+  <div id="lists"></div>
+</section>
+
+<section id="tab-tpl" hidden>
+  <h1>הודעות מוכנות</h1>
+  <div class="card">
+    <label for="tTitle">כותרת</label>
+    <input id="tTitle" autocomplete="off">
+    <label for="tText">נוסח (<span class="ltr">{שם}</span> יוחלף בשם הנמען)</label>
+    <textarea id="tText"></textarea>
+    <p class="muted" id="tErr" role="alert"></p>
+    <button class="primary" id="tSave">שמירת ההודעה</button>
+  </div>
+  <div id="tpls"></div>
+</section>
+
+<section id="tab-share" hidden>
+  <h1>שיתוף עם קולגות</h1>
+  <p class="muted">שולחים לקולגה את האנשים, הרשימות וההודעות המוכנות שלכם, והוא מייבא אותם לאפליקציה שלו. אין שרת באמצע: מה ששיתפתם הוא העתק, ושינויים שתעשו אחר כך לא יגיעו אליו לבד.</p>
+  <div class="card">
+    <h2 style="margin-top:0">לשלוח</h2>
+    <label class="row" style="color:inherit"><input type="checkbox" id="xSched" style="width:auto"> לכלול גם את התזמונים</label>
+    <div class="row" style="margin-top:10px">
+      <button class="primary" id="xShare">שיתוף</button>
+      <button id="xCopy">העתקת קוד</button>
+    </div>
+    <p class="muted" id="xMsg" role="status"></p>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">לקבל</h2>
+    <label for="iCode">הדבקת הקוד שקיבלתם</label>
+    <textarea id="iCode" class="ltr"></textarea>
+    <label for="iFile">או בחירת הקובץ שקיבלתם</label>
+    <input id="iFile" type="file" accept=".txt,.json,text/plain,application/json">
+    <p class="muted" id="iMsg" role="status"></p>
+    <button class="primary" id="iGo">ייבוא</button>
+  </div>
+</section>
+
+</main>
+<nav>
+  <button data-tab="home" aria-current="page">תזמון</button>
+  <button data-tab="people">אנשים</button>
+  <button data-tab="lists">רשימות</button>
+  <button data-tab="tpl">הודעות</button>
+  <button data-tab="share">שיתוף</button>
+</nav>
+
+<script>
+"use strict";
+const KEY = "wa-scheduler-v1";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+let db = { contacts: [], lists: [], templates: [], schedules: [], log: [] };
+try { const raw = localStorage.getItem(KEY); if (raw) db = Object.assign(db, JSON.parse(raw)); } catch {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {} };
+
+// Israeli local numbers (05x...) become international; anything else is kept as typed.
+function normPhone(s) {
+  let d = String(s).replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  else if (d.startsWith("0")) d = "972" + d.slice(1);
+  else if (d.length === 9 && d[0] === "5") d = "972" + d; // Excel drops the leading zero of a mobile number
+  return d.length >= 9 && d.length <= 15 ? d : "";
+}
+const showPhone = (p) => "+" + p;
+const contact = (id) => db.contacts.find((c) => c.id === id);
+
+function addContact(name, phone, errEl) {
+  const p = normPhone(phone);
+  name = name.trim();
+  if (!name || !p) { errEl.textContent = "צריך שם ומספר טלפון תקין."; return null; }
+  const dup = db.contacts.find((c) => c.phone === p);
+  if (dup) { errEl.textContent = "המספר כבר שמור בשם " + dup.name + "."; return dup; }
+  const c = { id: uid(), name, phone: p };
+  db.contacts.push(c);
+  db.contacts.sort((a, b) => a.name.localeCompare(b.name, "he"));
+  errEl.textContent = "";
+  return c;
+}
+
+// k-th occurrence counted from the anchor, so a monthly 31st stays the 31st where it exists.
+function occurrence(anchor, repeat, k) {
+  const d = new Date(anchor);
+  if (repeat === "daily") d.setDate(d.getDate() + k);
+  else if (repeat === "weekly") d.setDate(d.getDate() + 7 * k);
+  else if (repeat === "monthly" || repeat === "yearly") {
+    const day = d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth() + (repeat === "yearly" ? 12 * k : k));
+    d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  }
+  return d.getTime();
+}
+function recipients(s) {
+  const ids = new Set(s.to);
+  s.lists.forEach((lid) => (db.lists.find((l) => l.id === lid)?.ids || []).forEach((id) => ids.add(id)));
+  return [...ids].map(contact).filter(Boolean);
+}
+function finishOccurrence(s) {
+  s.sent = {};
+  if (s.repeat === "once") { s.done = true; return; }
+  do { s.k++; s.next = occurrence(s.anchor, s.repeat, s.k); } while (s.next <= Date.now());
+}
+const fmt = (t) => new Date(t).toLocaleString("he-IL", { weekday: "short", day: "numeric", month: "numeric", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+const REPEAT = { once: "חד פעמי", daily: "כל יום", weekly: "כל שבוע", monthly: "כל חודש", yearly: "כל שנה" };
+
+// ---- pickers (chips) ----
+const picked = { s: new Set(), sl: new Set(), l: new Set() };
+function chips(el, items, set, prefix) {
+  el.innerHTML = items.length ? items.map((it) =>
+    `<button type="button" class="chip" data-id="${it.id}" aria-pressed="${set.has(it.id)}">${esc(prefix + it.name)}</button>`).join("")
+    : "";
+}
+function renderPickers() {
+  const box = $("sPick");
+  box.innerHTML = "";
+  const a = document.createElement("span"), b = document.createElement("span");
+  a.className = b.className = "chips";
+  chips(a, db.lists, picked.sl, "רשימה: ");
+  chips(b, db.contacts, picked.s, "");
+  a.dataset.set = "sl"; b.dataset.set = "s";
+  box.append(...a.children.length ? [a] : [], b);
+  if (!db.contacts.length) b.innerHTML = '<span class="muted">עוד אין אנשים. הוסיפו מספר למטה.</span>';
+  chips($("lPick"), db.contacts, picked.l, "");
+  if (!db.contacts.length) $("lPick").innerHTML = '<span class="muted">קודם מוסיפים אנשים בלשונית "אנשים".</span>';
+  $("sTpl").innerHTML = '<option value="">בלי - כתיבה חופשית</option>' +
+    db.templates.map((t) => `<option value="${t.id}">${esc(t.title)}</option>`).join("");
+}
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  const set = picked[chip.parentElement.dataset.set || "l"];
+  set.has(chip.dataset.id) ? set.delete(chip.dataset.id) : set.add(chip.dataset.id);
+  chip.setAttribute("aria-pressed", set.has(chip.dataset.id));
+});
+
+// ---- render ----
+function renderHome() {
+  const now = Date.now();
+  const due = db.schedules.filter((s) => !s.done && s.next <= now);
+  $("dueBox").innerHTML = due.map((s) => {
+    const left = recipients(s).filter((c) => !s.sent[c.id]);
+    return `<div class="card due"><strong>מוכן לשליחה</strong> <span class="muted">${esc(fmt(s.next))}</span>
+      <div class="msg">${esc(s.text)}</div>
+      <div class="chips">${left.map((c) => `<button class="primary" data-send="${s.id}" data-c="${c.id}">שליחה ל${esc(c.name)}</button>`).join("")}</div>
+      <button class="link" data-skip="${s.id}">דילוג על הפעם הזאת</button></div>`;
+  }).join("");
+  const up = db.schedules.filter((s) => !s.done && s.next > now).sort((a, b) => a.next - b.next);
+  $("upcoming").innerHTML = up.length ? up.map((s) => {
+    const r = recipients(s);
+    return `<div class="card"><div class="row"><div class="grow"><strong>${esc(fmt(s.next))}</strong>
+      <span class="muted">· ${REPEAT[s.repeat]} · ${r.length} נמענים</span></div>
+      <button class="link" data-del-s="${s.id}">מחיקה</button></div>
+      <div class="msg">${esc(s.text)}</div><div class="muted">${esc(r.map((c) => c.name).join(", "))}</div></div>`;
+  }).join("") : '<div class="empty">אין הודעות מתוזמנות.</div>';
+  $("log").innerHTML = db.log.length ? db.log.slice(0, 15).map((l) =>
+    `<div class="card"><strong>${esc(l.name)}</strong> <span class="muted">${esc(fmt(l.t))}</span><div class="msg">${esc(l.text)}</div></div>`).join("")
+    : '<div class="empty">עוד לא נשלח כלום.</div>';
+}
+function renderPeople() {
+  const q = $("cSearch").value.trim();
+  const qd = q.replace(/\D/g, "");
+  const rows = db.contacts.filter((c) => !q || c.name.includes(q) || (qd && c.phone.includes(qd.replace(/^0/, ""))));
+  $("people").innerHTML = rows.length ? rows.map((c) =>
+    `<div class="card row"><div class="grow"><strong>${esc(c.name)}</strong><br><span class="muted ltr">${showPhone(c.phone)}</span></div>
+     <button class="link" data-del-c="${c.id}">מחיקה</button></div>`).join("")
+    : `<div class="empty">${db.contacts.length ? "אין תוצאות." : "עוד אין אנשים שמורים."}</div>`;
+}
+function renderLists() {
+  $("lists").innerHTML = db.lists.map((l) =>
+    `<div class="card"><div class="row"><strong class="grow">${esc(l.name)}</strong><span class="muted">${l.ids.filter(contact).length} אנשים</span>
+     <button class="link" data-del-l="${l.id}">מחיקה</button></div>
+     <div class="muted">${esc(l.ids.map(contact).filter(Boolean).map((c) => c.name).join(", "))}</div></div>`).join("")
+    || '<div class="empty">עוד אין רשימות.</div>';
+}
+function renderTpls() {
+  $("tpls").innerHTML = db.templates.map((t) =>
+    `<div class="card"><div class="row"><strong class="grow">${esc(t.title)}</strong>
+     <button class="link" data-del-t="${t.id}">מחיקה</button></div><div class="msg">${esc(t.text)}</div></div>`).join("")
+    || '<div class="empty">עוד אין הודעות מוכנות.</div>';
+}
+function renderAll() { save(); renderPickers(); renderHome(); renderPeople(); renderLists(); renderTpls(); }
+
+// ---- actions ----
+$("qAdd").onclick = () => {
+  const c = addContact($("qName").value, $("qPhone").value, $("sErr"));
+  if (!c) return;
+  picked.s.add(c.id); $("qName").value = $("qPhone").value = "";
+  renderAll();
+};
+$("cAdd").onclick = () => {
+  if (addContact($("cName").value, $("cPhone").value, $("cErr"))) { $("cName").value = $("cPhone").value = ""; renderAll(); }
+};
+$("cBulkAdd").onclick = () => {
+  const bad = [];
+  let added = 0;
+  $("cBulk").value.split("\n").map((l) => l.trim()).filter(Boolean).forEach((line) => {
+    const m = line.match(/^(.*?)[,\t;:]?\s*(\+?[\d\-\s()]{9,})$/);
+    const before = db.contacts.length;
+    if (!m || !addContact(m[1].replace(/[,\t;:]+$/, ""), m[2], $("cErr"))) bad.push(line);
+    else if (db.contacts.length > before) added++;
+  });
+  $("cBulk").value = bad.join("\n");
+  $("cErr").textContent = `נוספו ${added}.` + (bad.length ? ` ${bad.length} שורות לא נקלטו ונשארו בתיבה - צריך שם ומספר בכל שורה.` : "");
+  renderAll();
+};
+$("cSearch").oninput = renderPeople;
+
+// ---- import from image (OCR runs on the device) ----
+function parseOcr(text) {
+  const out = [];
+  text.split("\n").forEach((line) => {
+    const nums = (line.match(/\+?\d[\d\s\-.()]{7,16}\d/g) || []).map(normPhone).filter(Boolean);
+    if (!nums.length) return;
+    const name = line.replace(/\+?\d[\d\s\-.()]*/g, " ").replace(/[^\p{L}\s'"\-]/gu, " ").replace(/\s+/g, " ").trim();
+    nums.forEach((phone) => out.push({ name, phone }));
+  });
+  return out;
+}
+let ocrLib;
+const loadOcr = () => ocrLib ||= new Promise((ok, fail) => {
+  const el = document.createElement("script");
+  el.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+  el.onload = ok; el.onerror = () => { ocrLib = null; fail(new Error("load")); };
+  document.head.append(el);
+});
+function addOcrRow(r) {
+  const row = document.createElement("div");
+  row.className = "row"; row.style.marginBottom = "8px";
+  row.innerHTML = `<input class="grow" placeholder="שם" value="${esc(r.name)}"><input class="grow" type="tel" value="${showPhone(r.phone)}"><button class="link" type="button">הסרה</button>`;
+  row.lastChild.onclick = () => { row.remove(); $("oSave").hidden = !$("oRows").children.length; };
+  $("oRows").append(row);
+}
+$("oFile").onchange = async () => {
+  const files = [...$("oFile").files];
+  if (!files.length) return;
+  $("oMsg").textContent = "קורא את התמונה... בפעם הראשונה זה לוקח יותר זמן.";
+  let found = 0;
+  try {
+    await loadOcr();
+    const worker = await Tesseract.createWorker(["heb", "eng"]);
+    // The library's default (single block) returns garbage on a spreadsheet grid; automatic layout reads it.
+    await worker.setParameters({ tessedit_pageseg_mode: "3" });
+    for (const f of files) {
+      const { data } = await worker.recognize(f);
+      const rows = parseOcr(data.text);
+      rows.forEach(addOcrRow); found += rows.length;
+    }
+    await worker.terminate();
+    $("oMsg").textContent = found
+      ? `נמצאו ${found} מספרים. כדאי לעבור על השמות והמספרים לפני השמירה - קריאה מתמונה טועה לפעמים.`
+      : "לא נמצא מספר טלפון בתמונה. אפשר לנסות צילום חד יותר, או להקליד ידנית.";
+  } catch {
+    $("oMsg").textContent = "הקריאה נכשלה. בפעם הראשונה צריך חיבור לאינטרנט כדי להוריד את מנוע הקריאה.";
+  }
+  $("oFile").value = "";
+  $("oSave").hidden = !$("oRows").children.length;
+};
+$("oSave").onclick = () => {
+  let added = 0, left = 0;
+  [...$("oRows").children].forEach((row) => {
+    const [n, p] = row.querySelectorAll("input");
+    const before = db.contacts.length;
+    if (addContact(n.value, p.value, $("cErr"))) { added += db.contacts.length - before; row.remove(); } else left++;
+  });
+  $("cErr").textContent = "";
+  $("oMsg").textContent = `נשמרו ${added}.` + (left ? ` ${left} שורות נשארו - חסר בהן שם או שהמספר לא תקין.` : "");
+  $("oSave").hidden = !$("oRows").children.length;
+  renderAll();
+};
+$("sTpl").onchange = () => { const t = db.templates.find((x) => x.id === $("sTpl").value); if (t) $("sText").value = t.text; };
+$("sSave").onclick = () => {
+  const text = $("sText").value.trim(), when = new Date($("sWhen").value).getTime();
+  const s = { id: uid(), text, to: [...picked.s], lists: [...picked.sl], repeat: $("sRepeat").value, anchor: when, next: when, k: 0, sent: {}, done: false };
+  const err = !text ? "חסר נוסח להודעה." : !recipients(s).length ? "צריך לבחור לפחות נמען אחד." : !when ? "צריך לבחור תאריך ושעה." : "";
+  $("sErr").textContent = err;
+  if (err) return;
+  db.schedules.push(s);
+  picked.s.clear(); picked.sl.clear(); $("sText").value = ""; $("sTpl").value = "";
+  renderAll();
+};
+$("lSave").onclick = () => {
+  const name = $("lName").value.trim();
+  const err = !name ? "חסר שם לרשימה." : !picked.l.size ? "צריך לבחור לפחות אדם אחד." : "";
+  $("lErr").textContent = err;
+  if (err) return;
+  db.lists.push({ id: uid(), name, ids: [...picked.l] });
+  picked.l.clear(); $("lName").value = "";
+  renderAll();
+};
+$("tSave").onclick = () => {
+  const title = $("tTitle").value.trim(), text = $("tText").value.trim();
+  $("tErr").textContent = title && text ? "" : "צריך כותרת ונוסח.";
+  if (!title || !text) return;
+  db.templates.push({ id: uid(), title, text });
+  $("tTitle").value = $("tText").value = "";
+  renderAll();
+};
+document.addEventListener("click", (e) => {
+  const d = e.target.dataset;
+  if (d.send) {
+    const s = db.schedules.find((x) => x.id === d.send), c = contact(d.c);
+    const text = s.text.replaceAll("{שם}", c.name);
+    window.open("https://wa.me/" + c.phone + "?text=" + encodeURIComponent(text), "_blank");
+    s.sent[c.id] = true;
+    db.log.unshift({ t: Date.now(), name: c.name, text });
+    db.log.length = Math.min(db.log.length, 100);
+    if (!recipients(s).some((r) => !s.sent[r.id])) finishOccurrence(s);
+  } else if (d.skip) finishOccurrence(db.schedules.find((x) => x.id === d.skip));
+  else if (d.delS) { if (!confirm("למחוק את התזמון?")) return; db.schedules = db.schedules.filter((x) => x.id !== d.delS); }
+  else if (d.delC) {
+    if (!confirm("למחוק את " + contact(d.delC).name + "?")) return;
+    db.contacts = db.contacts.filter((x) => x.id !== d.delC);
+    Object.values(picked).forEach((set) => set.delete(d.delC));
+  }
+  else if (d.delL) { if (!confirm("למחוק את הרשימה?")) return; db.lists = db.lists.filter((x) => x.id !== d.delL); picked.sl.delete(d.delL); }
+  else if (d.delT) { if (!confirm("למחוק את ההודעה?")) return; db.templates = db.templates.filter((x) => x.id !== d.delT); }
+  else if (d.tab) {
+    document.querySelectorAll("section").forEach((s) => (s.hidden = s.id !== "tab-" + d.tab));
+    document.querySelectorAll("nav button").forEach((b) => b.toggleAttribute("aria-current", false));
+    e.target.setAttribute("aria-current", "page");
+    scrollTo(0, 0);
+    return;
+  } else return;
+  renderAll();
+});
+
+// ---- sharing between colleagues: a copy travels as a code, phones are the identity ----
+const MARK = "D1Z1:";
+function exportCode(withSchedules) {
+  const phone = (id) => contact(id)?.phone;
+  const data = {
+    contacts: db.contacts.map(({ name, phone }) => ({ name, phone })),
+    lists: db.lists.map((l) => ({ name: l.name, phones: l.ids.map(phone).filter(Boolean) })),
+    templates: db.templates.map(({ title, text }) => ({ title, text })),
+    schedules: !withSchedules ? [] : db.schedules.filter((x) => !x.done).map((x) => ({
+      text: x.text, repeat: x.repeat, anchor: x.anchor, phones: x.to.map(phone).filter(Boolean),
+      lists: x.lists.map((id) => db.lists.find((l) => l.id === id)?.name).filter(Boolean),
+    })),
+  };
+  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  let bin = ""; bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return MARK + btoa(bin);
+}
+function importCode(code) {
+  code = code.trim();
+  const at = code.indexOf(MARK);
+  if (at < 0) throw new Error("bad");
+  const bin = atob(code.slice(at + MARK.length).replace(/\s+/g, ""));
+  const data = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))));
+  const str = (v) => (typeof v === "string" ? v.trim().slice(0, 4000) : "");
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  const n = { contacts: 0, lists: 0, templates: 0, schedules: 0 };
+  const idOf = (rawPhone, name) => {
+    const p = normPhone(str(rawPhone));
+    if (!p) return null;
+    let c = db.contacts.find((x) => x.phone === p);
+    if (!c) { c = { id: uid(), name: str(name) || showPhone(p), phone: p }; db.contacts.push(c); n.contacts++; }
+    return c.id;
+  };
+  arr(data.contacts).forEach((c) => idOf(c?.phone, c?.name));
+  const listId = (name, phones) => {
+    name = str(name);
+    if (!name) return null;
+    let l = db.lists.find((x) => x.name === name);
+    if (!l) { l = { id: uid(), name, ids: [] }; db.lists.push(l); n.lists++; }
+    arr(phones).forEach((p) => { const id = idOf(p); if (id && !l.ids.includes(id)) l.ids.push(id); });
+    return l.id;
+  };
+  arr(data.lists).forEach((l) => listId(l?.name, l?.phones));
+  arr(data.templates).forEach((t) => {
+    const title = str(t?.title), text = str(t?.text);
+    if (!title || !text || db.templates.some((x) => x.title === title && x.text === text)) return;
+    db.templates.push({ id: uid(), title, text }); n.templates++;
+  });
+  arr(data.schedules).forEach((x) => {
+    const text = str(x?.text), anchor = Number(x?.anchor), repeat = REPEAT[x?.repeat] ? x.repeat : "";
+    if (!text || !repeat || !Number.isFinite(anchor)) return;
+    if (db.schedules.some((y) => y.text === text && y.anchor === anchor && y.repeat === repeat)) return;
+    const sc = { id: uid(), text, repeat, anchor, next: anchor, k: 0, sent: {}, done: false,
+      to: arr(x.phones).map((p) => idOf(p)).filter(Boolean),
+      lists: arr(x.lists).map((name) => db.lists.find((l) => l.name === str(name))?.id).filter(Boolean) };
+    if (anchor <= Date.now()) { if (repeat === "once") return; finishOccurrence(sc); }
+    if (recipients(sc).length) { db.schedules.push(sc); n.schedules++; }
+  });
+  db.contacts.sort((a, b) => a.name.localeCompare(b.name, "he"));
+  return n;
+}
+$("xCopy").onclick = async () => {
+  try { await navigator.clipboard.writeText(exportCode($("xSched").checked)); $("xMsg").textContent = "הקוד הועתק. מדביקים אותו בהודעה לקולגה."; }
+  catch { $("xMsg").textContent = "ההעתקה נחסמה. אפשר להשתמש בכפתור שיתוף."; }
+};
+$("xShare").onclick = async () => {
+  const code = exportCode($("xSched").checked);
+  const file = new File([code], "דוח-1-בזמן.txt", { type: "text/plain" });
+  try {
+    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "דוח 1 בזמן" });
+    else if (navigator.share) await navigator.share({ text: code, title: "דוח 1 בזמן" });
+    else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+      $("xMsg").textContent = "הקובץ ירד. שולחים אותו לקולגה.";
+    }
+  } catch (e) { if (e.name !== "AbortError") $("xMsg").textContent = "השיתוף נכשל. אפשר להשתמש בהעתקת קוד."; }
+};
+$("iGo").onclick = async () => {
+  const f = $("iFile").files[0];
+  try {
+    const code = f ? await f.text() : $("iCode").value;
+    if (!code.trim()) { $("iMsg").textContent = "צריך להדביק קוד או לבחור קובץ."; return; }
+    const n = importCode(code);
+    $("iMsg").textContent = `נוספו ${n.contacts} אנשים, ${n.lists} רשימות, ${n.templates} הודעות ו-${n.schedules} תזמונים. מה שכבר היה אצלכם לא שוכפל.`;
+    $("iCode").value = ""; $("iFile").value = "";
+    renderAll();
+  } catch { $("iMsg").textContent = "הקוד או הקובץ לא תקינים. כדאי לבקש מהקולגה לשלוח שוב."; }
+};
+
+const pad = (n) => String(n).padStart(2, "0");
+const t0 = new Date(Date.now() + 3600e3);
+$("sWhen").value = `${t0.getFullYear()}-${pad(t0.getMonth() + 1)}-${pad(t0.getDate())}T${pad(t0.getHours())}:00`;
+renderAll();
+setInterval(renderHome, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) renderHome(); });
+</script>
+</body>
+</html>
