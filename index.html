@@ -329,7 +329,10 @@ function renderHome() {
     const left = recipients(s).filter((c) => !s.sent[c.id]);
     return `<div class="card due"><strong>מוכן לשליחה</strong> <span class="muted">${esc(fmt(s.next))}</span>
       <div class="msg">${esc(s.text)}</div>
-      <div class="chips">${left.map((c) => `<button class="primary" data-send="${s.id}" data-c="${c.id}">שליחה ל${esc(c.name)}</button>`).join("")}</div>
+      ${left.length > 1 ? `<button class="primary" data-all="${s.id}">שליחה לכולם בבת אחת (${left.length})</button>
+      <p class="muted" style="margin:8px 0 12px">וואטסאפ ייפתח עם ההודעה. שם בוחרים רשימת תפוצה, קבוצה או כמה אנשים, ושולחים פעם אחת. מספר שלא שמור בטלפון לא יופיע שם; לו שולחים מהכפתור עם השם שלו.</p>
+      <div class="muted">או אחד אחד, עם השם של כל נמען בהודעה:</div>` : ""}
+      <div class="chips">${left.map((c) => `<button class="${left.length > 1 ? "" : "primary"}" data-send="${s.id}" data-c="${c.id}">שליחה ל${esc(c.name)}</button>`).join("")}</div>
       <button class="link" data-skip="${s.id}">דילוג על הפעם הזאת</button></div>`;
   }).join("");
   const up = db.schedules.filter((s) => !s.done && s.next > now).sort((a, b) => a.next - b.next);
@@ -484,7 +487,17 @@ function sendTo(s, c) {
   db.log.length = Math.min(db.log.length, 100);
   if (!recipients(s).some((r) => !s.sent[r.id])) finishOccurrence(s);
 }
-// A tap may open only one WhatsApp chat, so the first recipient opens at once and the rest wait as buttons.
+// One message for everyone: WhatsApp opens its own recipient picker, where a broadcast list or several chats
+// can be chosen. The text is the same for all, so the name placeholder is dropped.
+function sendAll(s) {
+  const left = recipients(s).filter((c) => !s.sent[c.id]);
+  const text = s.text.replace(/[ \t]*\{שם\}/g, "").replace(/^[ \t]+/gm, "");
+  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank");
+  db.log.unshift({ t: Date.now(), name: `כולם בבת אחת (${left.length})`, text });
+  db.log.length = Math.min(db.log.length, 100);
+  finishOccurrence(s);
+}
+// A tap may open only one WhatsApp chat, so one recipient opens directly and several wait for a choice.
 $("sNow").onclick = () => {
   const text = $("sText").value.trim(), now = Date.now();
   const s = { id: uid(), text, to: [...picked.s], lists: [...picked.sl], repeat: "once", anchor: now, next: now, k: 0, sent: {}, done: false };
@@ -493,16 +506,13 @@ $("sNow").onclick = () => {
   $("sErr").textContent = err;
   if (err) return;
   db.schedules.push(s);
-  sendTo(s, all[0]);
+  if (all.length === 1) sendTo(s, all[0]);
   picked.s.clear(); picked.sl.clear(); $("sText").value = ""; $("sTpl").value = "";
   renderAll();
   const ok = $("sOk");
-  ok.hidden = false;
-  if (s.done) ok.innerHTML = `<strong>וואטסאפ נפתח עם ההודעה ל${esc(all[0].name)}.</strong> נשאר ללחוץ שם על שלח.`;
-  else {
-    ok.innerHTML = `<strong>וואטסאפ נפתח עם ההודעה ל${esc(all[0].name)}.</strong> ${all.length === 2 ? "הנמען השני מחכה" : `שאר ${all.length - 1} הנמענים מחכים`} למעלה תחת "מוכן לשליחה", כפתור לכל אחד.`;
-    $("dueBox").scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  ok.hidden = all.length > 1;
+  if (all.length === 1) ok.innerHTML = `<strong>וואטסאפ נפתח עם ההודעה ל${esc(all[0].name)}.</strong> נשאר ללחוץ שם על שלח.`;
+  else $("dueBox").scrollIntoView({ behavior: "smooth", block: "start" });
 };
 $("lSave").onclick = () => {
   const name = $("lName").value.trim();
@@ -525,7 +535,8 @@ document.addEventListener("click", (e) => {
   const d = e.target.dataset;
   if (d.send) {
     sendTo(db.schedules.find((x) => x.id === d.send), contact(d.c));
-  } else if (d.ics) { addToCalendar(db.schedules.find((x) => x.id === d.ics)); return; }
+  } else if (d.all) sendAll(db.schedules.find((x) => x.id === d.all));
+  else if (d.ics) { addToCalendar(db.schedules.find((x) => x.id === d.ics)); return; }
   else if (d.skip) finishOccurrence(db.schedules.find((x) => x.id === d.skip));
   else if (d.delS) { if (!confirm("למחוק את התזמון?")) return; db.schedules = db.schedules.filter((x) => x.id !== d.delS); }
   else if (d.delC) {
