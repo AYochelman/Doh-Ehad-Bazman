@@ -34,6 +34,7 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
   :focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
   .due { border-color: var(--accent); background: var(--soft); }
+  .warnbox { border-color: var(--danger); }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .grow { flex: 1; min-width: 0; }
   .muted { color: var(--muted); font-size: .88rem; }
@@ -71,6 +72,7 @@
 
 <section id="tab-home">
   <div class="row brand"><img src="data:image/jpeg;base64,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" alt="" width="56" height="56"><h1>דוח 1 בזמן</h1></div>
+  <div class="card warnbox" id="storeWarn" hidden></div>
   <div id="dueBox"></div>
   <h2>הודעה מתוזמנת חדשה</h2>
   <div class="card">
@@ -97,6 +99,7 @@
     </div>
     <p class="muted" id="sErr" role="alert"></p>
     <button class="primary" id="sSave">שמירת התזמון</button>
+    <div class="card due" id="sOk" hidden style="margin:12px 0 0"></div>
   </div>
   <h2>מתוזמנות</h2>
   <div id="upcoming"></div>
@@ -195,7 +198,19 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 
 let db = { contacts: [], lists: [], templates: [], schedules: [], log: [] };
 try { const raw = localStorage.getItem(KEY); if (raw) db = Object.assign(db, JSON.parse(raw)); } catch {}
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {} };
+let storeOk = true;
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); storeOk = localStorage.getItem(KEY) !== null; } catch { storeOk = false; } };
+const installed = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+navigator.storage?.persist?.().catch(() => {});
+function renderStoreWarn() {
+  const el = $("storeWarn");
+  const msg = !storeOk
+    ? "<strong>הדפדפן הזה לא שומר את הנתונים.</strong> כנראה גלישה פרטית. מה שתזינו יימחק כשהדף ייסגר."
+    : !installed
+    ? "<strong>האפליקציה פתוחה בדפדפן, לא ממסך הבית.</strong> מה שמזינים כאן נשמר רק בדפדפן הזה ולא יופיע באפליקציה שעל מסך הבית. כדי להעביר נתונים: לשונית שיתוף, העתקת קוד, ואז ייבוא באפליקציה."
+    : "";
+  el.hidden = !msg; el.innerHTML = msg;
+}
 
 // Israeli local numbers (05x...) become international; anything else is kept as typed.
 function normPhone(s) {
@@ -247,6 +262,32 @@ function finishOccurrence(s) {
 const fmt = (t) => new Date(t).toLocaleString("he-IL", { weekday: "short", day: "numeric", month: "numeric", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 const REPEAT = { once: "חד פעמי", daily: "כל יום", weekly: "כל שבוע", monthly: "כל חודש", yearly: "כל שנה" };
 
+// ---- calendar reminder: the only way to be alerted on an iPhone while the app is closed, without a server ----
+function icsFor(s) {
+  const d = new Date(s.next), p2 = (n) => String(n).padStart(2, "0");
+  const local = (x) => `${x.getFullYear()}${p2(x.getMonth() + 1)}${p2(x.getDate())}T${p2(x.getHours())}${p2(x.getMinutes())}00`;
+  const txt = (v) => v.replace(/\\/g, "\\\\").replace(/([,;])/g, "\\$1").replace(/\r?\n/g, "\\n");
+  const names = recipients(s).map((c) => c.name).join(", ");
+  const url = location.href.split("#")[0];
+  const rule = { daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" }[s.repeat];
+  return [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Doh 1 Bazman//HE", "BEGIN:VEVENT",
+    "UID:" + s.id + "@doh-ehad-bazman", "DTSTAMP:" + local(new Date()), "DTSTART:" + local(d), "DURATION:PT5M",
+    ...(rule ? ["RRULE:FREQ=" + rule] : []),
+    "SUMMARY:" + txt("דוח 1 בזמן: לשלוח ל" + names),
+    "DESCRIPTION:" + txt(s.text + "\n\nלשליחה פותחים את האפליקציה: " + url),
+    ...(url.startsWith("http") ? ["URL:" + url] : []),
+    "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + txt("דוח 1 בזמן: הגיע הזמן לשלוח"), "TRIGGER:PT0M", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+}
+function addToCalendar(s) {
+  const a = document.createElement("a");
+  a.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(icsFor(s));
+  a.download = "doh1-reminder.ics";
+  document.body.append(a); a.click(); a.remove();
+}
+
 // ---- pickers (chips) ----
 const picked = { s: new Set(), sl: new Set(), l: new Set() };
 function chips(el, items, set, prefix) {
@@ -294,7 +335,8 @@ function renderHome() {
     return `<div class="card"><div class="row"><div class="grow"><strong>${esc(fmt(s.next))}</strong>
       <span class="muted">· ${REPEAT[s.repeat]} · ${r.length} נמענים</span></div>
       <button class="link" data-del-s="${s.id}">מחיקה</button></div>
-      <div class="msg">${esc(s.text)}</div><div class="muted">${esc(r.map((c) => c.name).join(", "))}</div></div>`;
+      <div class="msg">${esc(s.text)}</div><div class="muted">${esc(r.map((c) => c.name).join(", "))}</div>
+      <button data-ics="${s.id}" style="margin-top:10px">תזכורת ביומן</button></div>`;
   }).join("") : '<div class="empty">אין הודעות מתוזמנות.</div>';
   $("log").innerHTML = db.log.length ? db.log.slice(0, 15).map((l) =>
     `<div class="card"><strong>${esc(l.name)}</strong> <span class="muted">${esc(fmt(l.t))}</span><div class="msg">${esc(l.text)}</div></div>`).join("")
@@ -322,7 +364,7 @@ function renderTpls() {
      <button class="link" data-del-t="${t.id}">מחיקה</button></div><div class="msg">${esc(t.text)}</div></div>`).join("")
     || '<div class="empty">עוד אין הודעות מוכנות.</div>';
 }
-function renderAll() { save(); renderPickers(); renderHome(); renderPeople(); renderLists(); renderTpls(); }
+function renderAll() { save(); renderStoreWarn(); renderPickers(); renderHome(); renderPeople(); renderLists(); renderTpls(); }
 
 // ---- actions ----
 $("qAdd").onclick = () => {
@@ -421,6 +463,15 @@ $("sSave").onclick = () => {
   db.schedules.push(s);
   picked.s.clear(); picked.sl.clear(); $("sText").value = ""; $("sTpl").value = "";
   renderAll();
+  const ok = $("sOk");
+  ok.hidden = false;
+  if (when <= Date.now()) {
+    ok.innerHTML = "<strong>נשמר, והזמן כבר הגיע.</strong> ההודעה מחכה למעלה תחת \"מוכן לשליחה\".";
+    $("dueBox").scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    ok.innerHTML = `<strong>התזמון נשמר ל-${esc(fmt(when))}.</strong><div class="muted">האפליקציה לא יכולה להתריע כשהיא סגורה. כדי לקבל התראה בזמן, מוסיפים תזכורת ליומן של הטלפון.</div>
+      <button class="primary" data-ics="${s.id}" style="margin-top:10px">הוספת תזכורת ליומן</button>`;
+  }
 };
 $("lSave").onclick = () => {
   const name = $("lName").value.trim();
@@ -449,7 +500,8 @@ document.addEventListener("click", (e) => {
     db.log.unshift({ t: Date.now(), name: c.name, text });
     db.log.length = Math.min(db.log.length, 100);
     if (!recipients(s).some((r) => !s.sent[r.id])) finishOccurrence(s);
-  } else if (d.skip) finishOccurrence(db.schedules.find((x) => x.id === d.skip));
+  } else if (d.ics) { addToCalendar(db.schedules.find((x) => x.id === d.ics)); return; }
+  else if (d.skip) finishOccurrence(db.schedules.find((x) => x.id === d.skip));
   else if (d.delS) { if (!confirm("למחוק את התזמון?")) return; db.schedules = db.schedules.filter((x) => x.id !== d.delS); }
   else if (d.delC) {
     if (!confirm("למחוק את " + contact(d.delC).name + "?")) return;
