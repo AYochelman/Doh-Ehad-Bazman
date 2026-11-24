@@ -81,7 +81,8 @@
     <select id="sTpl"></select>
     <label for="sText">נוסח ההודעה (<span class="ltr">{שם}</span> יוחלף בשם הנמען)</label>
     <textarea id="sText"></textarea>
-    <div class="row" style="justify-content:space-between"><label>נמענים</label><button class="edit" id="sAll" type="button">בחר הכל</button></div>
+    <div class="row" style="justify-content:space-between"><label for="sFind">נמענים <span id="sCount"></span></label><button class="edit" id="sAll" type="button">בחר הכל</button></div>
+    <input id="sFind" type="search" placeholder="חיפוש לפי שם או מספר" autocomplete="off" style="margin-bottom:8px">
     <div class="chips" id="sPick"></div>
     <label for="qPhone">מספר חדש - שם ומספר, יישמר לבחירה מהירה</label>
     <div class="row">
@@ -141,7 +142,8 @@
   <div class="card">
     <label for="lName">שם הרשימה</label>
     <input id="lName" autocomplete="off">
-    <div class="row" style="justify-content:space-between"><label>מי ברשימה</label><button class="edit" id="lAll" type="button">בחר הכל</button></div>
+    <div class="row" style="justify-content:space-between"><label for="lFind">מי ברשימה <span id="lCount"></span></label><button class="edit" id="lAll" type="button">בחר הכל</button></div>
+    <input id="lFind" type="search" placeholder="חיפוש לפי שם או מספר" autocomplete="off" style="margin-bottom:8px">
     <div class="chips" id="lPick"></div>
     <label for="lWa">שם רשימת התפוצה המקבילה בוואטסאפ (לא חובה)</label>
     <input id="lWa" autocomplete="off" placeholder="למשל: מחלקה א">
@@ -302,20 +304,39 @@ function chips(el, items, set, prefix) {
     `<button type="button" class="chip" data-id="${it.id}" aria-pressed="${set.has(it.id)}">${esc(prefix + it.name)}</button>`).join("")
     : "";
 }
-function renderPickers() {
-  const box = $("sPick");
+// One search rule everywhere: part of the name, or part of the number with or without the leading 0 / +972.
+function finder(q) {
+  q = q.trim().toLowerCase();
+  const digits = q.replace(/\D/g, "").replace(/^(972|0)/, "");
+  return (c) => !q || c.name.toLowerCase().includes(q) || (digits !== "" && c.phone.includes(digits));
+}
+const NO_MATCH = '<span class="muted">אין תוצאות לחיפוש.</span>';
+function renderCounts() {
+  $("sCount").textContent = picked.s.size + picked.sl.size ? `(נבחרו ${picked.s.size + picked.sl.size})` : "";
+  $("lCount").textContent = picked.l.size ? `(נבחרו ${picked.l.size})` : "";
+}
+function renderChips() {
+  const box = $("sPick"), q = $("sFind").value;
   box.innerHTML = "";
   const a = document.createElement("span"), b = document.createElement("span");
   a.className = b.className = "chips";
-  chips(a, db.lists, picked.sl, "רשימה: ");
-  chips(b, db.contacts, picked.s, "");
+  chips(a, db.lists.filter((l) => l.name.toLowerCase().includes(q.trim().toLowerCase())), picked.sl, "רשימה: ");
+  chips(b, db.contacts.filter(finder(q)), picked.s, "");
   a.dataset.set = "sl"; b.dataset.set = "s";
   box.append(...a.children.length ? [a] : [], b);
   if (!db.contacts.length) b.innerHTML = '<span class="muted">עוד אין אנשים. הוסיפו מספר למטה.</span>';
-  chips($("lPick"), db.contacts, picked.l, "");
+  else if (!a.children.length && !b.children.length) b.innerHTML = NO_MATCH;
+  chips($("lPick"), db.contacts.filter(finder($("lFind").value)), picked.l, "");
   if (!db.contacts.length) $("lPick").innerHTML = '<span class="muted">קודם מוסיפים אנשים בלשונית "אנשים".</span>';
+  else if (!$("lPick").children.length) $("lPick").innerHTML = NO_MATCH;
+  renderCounts();
+}
+function renderPickers() {
+  renderChips();
+  const tpl = $("sTpl").value;
   $("sTpl").innerHTML = '<option value="">בלי - כתיבה חופשית</option>' +
     db.templates.map((t) => `<option value="${t.id}">${esc(t.title)}</option>`).join("");
+  $("sTpl").value = db.templates.some((t) => t.id === tpl) ? tpl : "";
 }
 document.addEventListener("click", (e) => {
   const chip = e.target.closest(".chip");
@@ -323,7 +344,9 @@ document.addEventListener("click", (e) => {
   const set = picked[chip.parentElement.dataset.set || "l"];
   set.has(chip.dataset.id) ? set.delete(chip.dataset.id) : set.add(chip.dataset.id);
   chip.setAttribute("aria-pressed", set.has(chip.dataset.id));
+  renderCounts();
 });
+$("sFind").oninput = $("lFind").oninput = renderChips;
 
 // ---- render ----
 function renderHome() {
@@ -355,9 +378,7 @@ function renderHome() {
     : '<div class="empty">עוד לא נשלח כלום.</div>';
 }
 function renderPeople() {
-  const q = $("cSearch").value.trim();
-  const qd = q.replace(/\D/g, "");
-  const rows = db.contacts.filter((c) => !q || c.name.includes(q) || (qd && c.phone.includes(qd.replace(/^0/, ""))));
+  const rows = db.contacts.filter(finder($("cSearch").value));
   $("people").innerHTML = rows.length ? rows.map((c) =>
     `<div class="card row"><div class="grow"><strong>${esc(c.name)}</strong><br><span class="muted ltr">${showPhone(c.phone)}</span></div>
      <button class="edit" data-edit-c="${c.id}">עריכה</button><button class="link" data-del-c="${c.id}">מחיקה</button></div>`).join("")
@@ -403,18 +424,20 @@ function setEdit(kind, id) {
 }
 function clearForm(kind) {
   if (kind === "c") $("cName").value = $("cPhone").value = $("cErr").textContent = "";
-  if (kind === "l") { $("lName").value = $("lWa").value = $("lErr").textContent = ""; picked.l.clear(); }
+  if (kind === "l") { $("lName").value = $("lWa").value = $("lFind").value = $("lErr").textContent = ""; picked.l.clear(); }
   if (kind === "t") $("tTitle").value = $("tText").value = $("tErr").textContent = "";
   setEdit(kind, null);
 }
 ["c", "l", "t"].forEach((k) => ($(FORM[k].cancel).onclick = () => { clearForm(k); renderAll(); }));
-function selectAll(set, btn) {
-  const all = db.contacts.every((c) => set.has(c.id));
-  db.contacts.forEach((c) => (all ? set.delete(c.id) : set.add(c.id)));
-  renderPickers();
+// With a search typed in, "select all" means everyone the search shows.
+function selectAll(set, findEl) {
+  const shown = db.contacts.filter(finder(findEl.value));
+  const all = shown.every((c) => set.has(c.id));
+  shown.forEach((c) => (all ? set.delete(c.id) : set.add(c.id)));
+  renderChips();
 }
-$("lAll").onclick = () => selectAll(picked.l);
-$("sAll").onclick = () => selectAll(picked.s);
+$("lAll").onclick = () => selectAll(picked.l, $("lFind"));
+$("sAll").onclick = () => selectAll(picked.s, $("sFind"));
 
 $("cAdd").onclick = () => {
   const cur = contact(editing.c);
@@ -516,7 +539,7 @@ $("sSave").onclick = () => {
   $("sErr").textContent = err;
   if (err) return;
   db.schedules.push(s);
-  picked.s.clear(); picked.sl.clear(); $("sText").value = ""; $("sTpl").value = "";
+  picked.s.clear(); picked.sl.clear(); $("sText").value = $("sTpl").value = $("sFind").value = "";
   renderAll();
   const ok = $("sOk");
   ok.hidden = false;
@@ -582,7 +605,7 @@ $("sNow").onclick = () => {
   $("sErr").textContent = err;
   if (err) return;
   db.schedules.push(s);
-  picked.s.clear(); picked.sl.clear(); $("sText").value = ""; $("sTpl").value = "";
+  picked.s.clear(); picked.sl.clear(); $("sText").value = $("sTpl").value = $("sFind").value = "";
   renderAll();
   $("sOk").hidden = true;
   $("dueBox").scrollIntoView({ behavior: "smooth", block: "start" });
