@@ -281,7 +281,7 @@
 "use strict";
 const KEY = "wa-scheduler-v1";
 // Bump on every release: the app compares it with the copy on the server to offer an update.
-const VERSION = "14";
+const VERSION = "15";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -411,17 +411,22 @@ function icsFor(s) {
     "END:VEVENT", "END:VCALENDAR",
   ].join("\r\n");
 }
-// An installed iPhone web app ignores file downloads, so the calendar file goes through the share sheet
-// where that exists, and falls back to a download elsewhere.
-async function addToCalendar(s) {
+// Only Safari itself turns a calendar file into an "add to calendar" sheet on an iPhone; an installed web
+// app and other browsers ignore it. So anywhere else on iOS the event is handed to a small page opened in
+// Safari (cal.html), which carries the event in its address and offers the file there.
+function addToCalendar(s) {
   const ics = icsFor(s);
-  const file = new File([ics], "doh1-reminder.ics", { type: "text/calendar" });
-  try {
-    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); return; }
-  } catch (e) { if (e.name === "AbortError") return; }
+  const inSafari = IOS && !installed && !/CriOS|FxiOS|EdgiOS/.test(navigator.userAgent);
+  if (IOS && !inSafari && location.protocol === "https:") {
+    const page = new URL("cal.html", location.href);
+    page.hash = encodeURIComponent(ics);
+    location.href = "x-safari-" + page.href;
+    toast("נפתח בספארי להוספה ליומן");
+    return;
+  }
   const a = document.createElement("a");
   a.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
-  a.download = file.name;
+  a.download = "doh1-reminder.ics";
   document.body.append(a); a.click(); a.remove();
 }
 // A plain link to Google Calendar's "new event" page: no file involved, so it works from an installed app too.

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>הוספה ליומן - דוח 1 בזמן</title>
+<link rel="icon" href="icon-v2-192.png">
+<style>
+  body { margin: 0; direction: rtl; background: #fff; color: #1c1b17; line-height: 1.5;
+    font-family: "Heebo", "Segoe UI", "Arial Hebrew", Arial, sans-serif; }
+  main { max-width: 520px; margin-inline: auto; padding: 28px 16px; }
+  h1 { font-size: 1.3rem; margin: 0 0 16px; }
+  .card { border: 1px solid rgb(60 50 0 / .13); border-radius: 20px; padding: 14px; margin-bottom: 16px; background: #fff7cc; }
+  .muted { color: #6b675c; font-size: .9rem; }
+  .msg { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 8px; }
+  a.btn { display: block; text-align: center; background: #ffd60a; color: #1c1b17; font-weight: 700;
+    text-decoration: none; border-radius: 12px; padding: 14px; }
+  a.btn:active { transform: scale(.97); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main dir="rtl" lang="he">
+  <h1>הוספת תזכורת ליומן</h1>
+  <div class="card" id="ev" hidden>
+    <strong id="title"></strong>
+    <div class="muted" id="when"></div>
+    <div class="msg" id="desc"></div>
+  </div>
+  <a class="btn" id="add" hidden download="doh1-reminder.ics">הוספה ליומן</a>
+  <p class="muted" id="note">אחרי ההוספה אפשר לסגור את הדף ולחזור לאפליקציה.</p>
+</main>
+<script>
+"use strict";
+// The event arrives in the address, after the #, as a calendar file. Nothing is sent anywhere.
+const $ = (id) => document.getElementById(id);
+let ics = "";
+try { ics = decodeURIComponent(location.hash.slice(1)); } catch {}
+if (!ics.startsWith("BEGIN:VCALENDAR")) {
+  $("note").textContent = "לא התקבל אירוע. חוזרים לאפליקציה ולוחצים שוב על \"תזכורת ביומן האייפון\".";
+} else {
+  const field = (name) => {
+    const line = ics.split("\r\n").find((l) => l.startsWith(name + ":"));
+    return line ? line.slice(name.length + 1).replace(/\\n/g, "\n").replace(/\\([,;\\])/g, "$1") : "";
+  };
+  const t = field("DTSTART").match(/^(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)/);
+  $("title").textContent = field("SUMMARY");
+  $("desc").textContent = field("DESCRIPTION").split("\n\n")[0];
+  if (t) $("when").textContent = new Date(t[1], t[2] - 1, t[3], t[4], t[5]).toLocaleString("he-IL", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) + (field("RRULE") ? " · חוזר" : "");
+  $("add").href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+  $("ev").hidden = $("add").hidden = false;
+}
+</script>
+</body>
+</html>
