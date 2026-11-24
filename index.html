@@ -128,6 +128,27 @@
   details[open] > summary::before { transform: rotate(45deg); }
   details[open] > :not(summary) { animation: rise .2s var(--out) both; }
 
+  button.icon { width: 44px; height: 44px; padding: 0; display: inline-grid; place-items: center; border-radius: 50%; font-size: 1.15rem; font-weight: 700; }
+  #reload.busy svg { animation: spin .7s linear infinite; }
+
+  /* Refresh in progress: a see-through yellow sheet over the whole app. */
+  #veil { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgb(255 214 10 / .55);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity .16s; }
+  #veil.on { opacity: 1; pointer-events: auto; transition-duration: .2s; }
+  #veil div { background: var(--card); border-radius: 999px; padding: 12px 18px; font-weight: 700; box-shadow: 0 6px 20px rgb(0 0 0 / .18); }
+
+  /* Tour: a dimmed screen with a hole around the thing being explained. */
+  #tourHole { position: fixed; z-index: 30; border-radius: 14px; box-shadow: 0 0 0 9999px rgb(28 27 23 / .62); pointer-events: none;
+    transition: top .3s var(--inout), left .3s var(--inout), width .3s var(--inout), height .3s var(--inout); }
+  #tourBlock { position: fixed; inset: 0; z-index: 29; }
+  #tourTip { position: fixed; z-index: 31; inset-inline: 16px; max-width: 420px; margin-inline: auto; background: var(--card); border-radius: var(--r-card);
+    padding: 14px; box-shadow: 0 10px 30px rgb(0 0 0 / .3); transition: top .3s var(--inout); }
+  #tourTip h3 { margin: 0 0 4px; font-size: 1.05rem; }
+  #tourTip p { margin: 0 0 12px; }
+  #tourDots { display: flex; gap: 5px; }
+  #tourDots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: background-color .2s; }
+  #tourDots i.on { background: var(--text); }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
   }
@@ -137,7 +158,10 @@
 <main dir="rtl" lang="he">
 
 <section id="tab-home">
-  <div class="row brand"><img src="data:image/jpeg;base64,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" alt="" width="56" height="56"><div class="grow"><h1>דוח 1 בזמן</h1><div class="muted" id="ver"></div></div><button id="reload" type="button">רענון</button></div>
+  <div class="row brand"><img src="data:image/jpeg;base64,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" alt="" width="56" height="56"><div class="grow"><h1>דוח 1 בזמן</h1><div class="muted" id="ver"></div></div><button class="icon" id="tourBtn" type="button" aria-label="סיור באפליקציה" title="סיור באפליקציה">?</button>
+    <button class="icon" id="reload" type="button" aria-label="רענון" title="רענון"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 4v7h-7"/></svg></button></div>
+  <div class="card due" id="tourOffer" hidden><strong>פעם ראשונה כאן?</strong> סיור של דקה מראה איך שולחים תזכורת.
+    <div class="row" style="margin-top:10px"><button class="primary" id="tourStart" type="button">התחלת הסיור</button><button id="tourSkip" type="button">לא עכשיו</button></div></div>
   <div class="card due" id="updBox" hidden><strong>יש גרסה חדשה של האפליקציה.</strong> <button class="primary" id="updGo" type="button" style="margin-top:8px">עדכון עכשיו</button></div>
   <div class="card warnbox" id="storeWarn" hidden></div>
   <div id="dueBox"></div>
@@ -268,6 +292,15 @@
 </section>
 
 </main>
+<div id="veil" role="status"><div><span class="spin"></span>מרענן...</div></div>
+<div id="tourBlock" hidden></div><div id="tourHole" hidden></div>
+<div id="tourTip" role="dialog" aria-modal="true" aria-labelledby="tourTitle" hidden>
+  <h3 id="tourTitle"></h3><p id="tourText"></p>
+  <div class="row" style="justify-content:space-between">
+    <div id="tourDots"></div>
+    <div class="row"><button id="tourEnd" class="edit" type="button">סיום</button><button id="tourPrev" type="button">הקודם</button><button id="tourNext" class="primary" type="button">הבא</button></div>
+  </div>
+</div>
 <div id="toast" role="status" aria-live="polite"><div><i></i><span></span></div></div>
 <nav><span id="navBar"></span>
   <button data-tab="home" aria-current="page">תזמון</button>
@@ -281,7 +314,7 @@
 "use strict";
 const KEY = "wa-scheduler-v1";
 // Bump on every release: the app compares it with the copy on the server to offer an update.
-const VERSION = "15";
+const VERSION = "16";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -979,7 +1012,79 @@ renderAll();
 // ---- refresh: an installed iPhone app keeps showing the copy it loaded, so fetch a fresh one on request ----
 $("ver").textContent = "גרסה " + VERSION;
 const BASE = location.href.split(/[?#]/)[0];
-const hardReload = () => location.replace(BASE + "?v=" + Date.now());
+// The yellow sheet goes up first, so the tap is answered before the page is fetched again.
+const hardReload = () => {
+  $("veil").classList.add("on"); $("reload").classList.add("busy");
+  setTimeout(() => location.replace(BASE + "?v=" + Date.now()), 350);
+};
+// Arriving from a refresh: the sheet is still up for a moment, then lifts and confirms.
+if (/[?&]v=\d/.test(location.search)) {
+  $("veil").classList.add("on");
+  history.replaceState(null, "", BASE);
+  setTimeout(() => { $("veil").classList.remove("on"); toast("האפליקציה מעודכנת · גרסה " + VERSION); }, 450);
+}
+
+// ---- tour: walks through the app on the real screens ----
+const TOUR = [
+  { tab: "home", el: "#sText", t: "כותבים את ההודעה", p: "מקלידים כאן, או בוחרים למעלה הודעה מוכנה ששמרתם מראש." },
+  { tab: "home", el: "#sPick", t: "בוחרים למי", p: "לוחצים על השמות. אפשר לחפש, לבחור הכל, או לבחור רשימה שלמה בלחיצה אחת." },
+  { tab: "home", el: "#sWhen", t: "קובעים מתי", p: "תאריך ושעה. מתחת בוחרים אם זה חד פעמי, כל יום, או בימים קבועים בשבוע." },
+  { tab: "home", el: "#sSave", t: "שומרים או שולחים", p: "\"שמירת התזמון\" שומרת למועד שקבעתם. \"שליחה עכשיו\" מכינה את ההודעה מיד." },
+  { tab: "home", el: "#dueBox, #upcoming", t: "כשמגיע הזמן", p: "ההודעה מופיעה כאן כ\"מוכן לשליחה\". לחיצה אחת פותחת SMS לכולם, או וואטסאפ." },
+  { tab: "people", el: "#tab-people .card", t: "אנשים", p: "מוסיפים שם ומספר, גם אם המספר לא שמור בטלפון. אפשר להדביק רשימה או לייבא מצילום מסך." },
+  { tab: "lists", el: "#tab-lists .card", t: "רשימות", p: "מקבצים אנשים לרשימה, למשל מחלקה, כדי לבחור את כולם בלחיצה." },
+  { tab: "tpl", el: "#tab-tpl .card", t: "הודעות מוכנות", p: "שומרים נוסחים שחוזרים על עצמם. {שם} בנוסח מתחלף בשם הנמען." },
+  { tab: "share", el: "#tab-share .card", t: "שיתוף וגיבוי", p: "מעבירים לקולגה את האנשים, הרשימות וההודעות. אותו קוד משמש גם כגיבוי שלכם." },
+  { tab: "home", el: "#reload", t: "רענון", p: "טוען את הגרסה העדכנית של האפליקציה. הנתונים שלכם נשארים." },
+];
+let tourAt = -1;
+const TOUR_KEY = KEY + "-tour";
+// The first candidate that is actually on screen with some height; an empty box is skipped.
+const tourTarget = (step) => [...document.querySelectorAll(step.el)].find((x) => x.offsetParent && x.getBoundingClientRect().height > 0);
+function tourPlace() {
+  const el = tourTarget(TOUR[tourAt]);
+  if (!el) return;
+  const r = el.getBoundingClientRect(), pad = 6, hole = $("tourHole"), tip = $("tourTip");
+  const top = Math.max(8, r.top - pad), h = Math.min(r.height + pad * 2, innerHeight * 0.45);
+  Object.assign(hole.style, { top: top + "px", left: Math.max(4, r.left - pad) + "px", width: Math.min(innerWidth - 8, r.width + pad * 2) + "px", height: h + "px" });
+  // The explanation sits under the highlighted area, or above it when there is no room below.
+  const below = top + h + 12, th = tip.offsetHeight;
+  const want = below + th < innerHeight - 8 ? below : top - th - 12;
+  tip.style.top = Math.min(Math.max(8, want), innerHeight - th - 8) + "px";
+}
+function tourShow(i) {
+  tourAt = i;
+  const step = TOUR[i];
+  const tabBtn = document.querySelector(`nav [data-tab="${step.tab}"]`);
+  if (!tabBtn.hasAttribute("aria-current")) tabBtn.click();
+  $("tourTitle").textContent = step.t; $("tourText").textContent = step.p;
+  $("tourDots").innerHTML = TOUR.map((_, n) => `<i class="${n === i ? "on" : ""}"></i>`).join("");
+  $("tourPrev").hidden = i === 0;
+  $("tourNext").textContent = i === TOUR.length - 1 ? "סיימתי" : "הבא";
+  ["tourBlock", "tourHole", "tourTip"].forEach((id) => ($(id).hidden = false));
+  tourTarget(step)?.scrollIntoView({ block: "center" });
+  requestAnimationFrame(() => requestAnimationFrame(tourPlace));
+  $("tourNext").focus({ preventScroll: true });
+}
+function tourEnd() {
+  tourAt = -1;
+  ["tourBlock", "tourHole", "tourTip"].forEach((id) => ($(id).hidden = true));
+  try { localStorage.setItem(TOUR_KEY, "1"); } catch {}
+  $("tourOffer").hidden = true;
+  const home = document.querySelector('nav [data-tab="home"]');
+  if (!home.hasAttribute("aria-current")) home.click();
+  scrollTo({ top: 0 });
+}
+$("tourBtn").onclick = $("tourStart").onclick = () => tourShow(0);
+$("tourNext").onclick = () => (tourAt === TOUR.length - 1 ? (tourEnd(), toast("זה הכל. בהצלחה")) : tourShow(tourAt + 1));
+$("tourPrev").onclick = () => tourShow(tourAt - 1);
+$("tourEnd").onclick = $("tourSkip").onclick = tourEnd;
+addEventListener("resize", () => { if (tourAt >= 0) tourPlace(); });
+addEventListener("keydown", (e) => { if (tourAt >= 0 && e.key === "Escape") tourEnd(); });
+// Offered once, to someone who has not entered anything yet.
+let tourSeen = false;
+try { tourSeen = !!localStorage.getItem(TOUR_KEY); } catch {}
+$("tourOffer").hidden = tourSeen || db.contacts.length > 0 || db.schedules.length > 0;
 $("reload").onclick = $("updGo").onclick = hardReload;
 async function checkUpdate() {
   try {
