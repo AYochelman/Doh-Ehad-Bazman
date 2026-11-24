@@ -35,11 +35,11 @@
     -webkit-tap-highlight-color: transparent;
   }
   main { max-width: 620px; margin-inline: auto; padding: 16px; }
-  h1 { font-size: 1.35rem; margin: 4px 0 14px; }
+  h1 { font-size: 1.35rem; line-height: 1.2; margin: 4px 0 14px; }
   .brand { margin-bottom: 14px; }
   .brand img { border-radius: 13px; }
   .brand h1 { margin: 0; }
-  h2 { font-size: 1rem; margin: 22px 0 8px; color: var(--muted); font-weight: 500; }
+  h2 { font-size: 1rem; line-height: 1.25; margin: 34px 0 8px; color: var(--muted); font-weight: 500; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--pad); margin-bottom: 10px; }
   .card .card { border-radius: var(--r-in); }
   :focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
@@ -62,18 +62,27 @@
   input[type=tel], .ltr { direction: ltr; text-align: left; unicode-bidi: isolate; }
   button {
     font: inherit; font-weight: 500; border-radius: var(--r-in); border: 1px solid var(--line);
-    background: var(--card); color: var(--text); padding: 10px 14px; min-height: 44px; cursor: pointer;
+    background: var(--card); color: var(--text); padding: 10px 20px; min-height: 44px; cursor: pointer;
     transition: transform .1s var(--out), background-color .15s, border-color .15s, opacity .15s;
     touch-action: manipulation;
   }
   /* Every button answers the finger at once, before anything else happens. */
   button:active { transform: scale(.97); }
   button.busy { opacity: .6; pointer-events: none; }
-  button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); min-height: 48px; padding-inline: 24px; }
   button.edit { border: 0; background: none; padding: 8px; text-decoration: underline; }
-  button.link { border: 0; background: none; color: var(--danger); padding: 8px; min-height: 44px; }
+  /* Destructive actions sit apart from the action next to them, so a slip of the thumb does not delete. */
+  button.link { border: 0; background: none; color: var(--danger); padding: 8px; min-height: 44px; margin-inline-start: 14px; }
+  .apart { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 6px; border-top: 1px solid var(--line); }
+  .apart button.link { margin: 0; }
+  .row.base { align-items: baseline; }
+  .field label { margin-top: 0; }
+  /* Two labelled fields share a line; their button takes the next one, so the fields stay wide enough to read. */
+  .row.fields { align-items: flex-end; }
+  .row.fields > button { flex: 1 1 100%; }
+  .row.fields > #cCancel { flex: 0 0 auto; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip, .daychip { border-radius: 999px; padding: 6px 12px; min-height: 36px; font-size: .92rem; }
+  .chip, .daychip { border-radius: 999px; padding: 6px 16px; min-height: 36px; font-size: .92rem; }
   .chip[aria-pressed=true], .daychip[aria-pressed=true] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .empty { color: var(--muted); text-align: center; padding: 22px 8px; }
   nav {
@@ -105,7 +114,7 @@
   }
   #toast div {
     display: flex; align-items: center; gap: 8px; max-width: 100%; background: var(--text); color: #fff;
-    border-radius: 999px; padding: 10px 16px 10px 12px; font-weight: 500; box-shadow: 0 6px 20px rgb(0 0 0 / .18);
+    border-radius: 999px; padding: 10px 22px 10px 14px; font-weight: 500; box-shadow: 0 1px 2px rgb(0 0 0 / .2), 0 8px 24px rgb(0 0 0 / .16);
     opacity: 0; transform: translateY(12px) scale(.95); transition: opacity .16s, transform .16s var(--out);
   }
   #toast div.on { opacity: 1; transform: none; transition-duration: .2s; }
@@ -142,7 +151,7 @@
     transition: top .3s var(--inout), left .3s var(--inout), width .3s var(--inout), height .3s var(--inout); }
   #tourBlock { position: fixed; inset: 0; z-index: 29; }
   #tourTip { position: fixed; z-index: 31; inset-inline: 16px; max-width: 420px; margin-inline: auto; background: var(--card); border-radius: var(--r-card);
-    padding: 14px; box-shadow: 0 10px 30px rgb(0 0 0 / .3); transition: top .3s var(--inout); }
+    padding: 14px; box-shadow: 0 1px 3px rgb(0 0 0 / .25), 0 12px 32px rgb(0 0 0 / .25); transition: top .3s var(--inout); }
   #tourTip h3 { margin: 0 0 4px; font-size: 1.05rem; }
   #tourTip p { margin: 0 0 12px; }
   #tourDots { display: flex; gap: 5px; }
@@ -176,11 +185,11 @@
     <div class="chips scroll" id="sPick"></div>
     <details>
       <summary>הוספת מספר חדש</summary>
-      <label for="qPhone">שם ומספר - יישמר לבחירה מהירה</label>
-      <div class="row">
-        <input class="grow" id="qName" placeholder="שם" autocomplete="off">
-        <input class="grow" id="qPhone" type="tel" inputmode="tel" placeholder="050-1234567" autocomplete="off">
-        <button id="qAdd">הוספה</button>
+      <p class="muted" style="margin:0 0 8px">האדם יישמר באפליקציה וייבחר מיד כנמען.</p>
+      <div class="row fields">
+        <div class="grow field"><label for="qName">שם</label><input id="qName" autocomplete="off"></div>
+        <div class="grow field"><label for="qPhone">מספר טלפון</label><input id="qPhone" type="tel" inputmode="tel" autocomplete="off"></div>
+        <button id="qAdd">הוספה ובחירה</button>
       </div>
     </details>
     <div>
@@ -211,10 +220,10 @@
   <h1>אנשים ומספרים</h1>
   <p class="muted">שמות שנשמרים כאן, באפליקציה בלבד. לא צריך לשמור את המספר באנשי הקשר של הטלפון.</p>
   <div class="card">
-    <div class="row">
-      <input class="grow" id="cName" placeholder="שם" autocomplete="off">
-      <input class="grow" id="cPhone" type="tel" inputmode="tel" placeholder="050-1234567" autocomplete="off">
-      <button class="primary" id="cAdd">הוספה</button>
+    <div class="row fields">
+      <div class="grow field"><label for="cName">שם</label><input id="cName" autocomplete="off"></div>
+      <div class="grow field"><label for="cPhone">מספר טלפון</label><input id="cPhone" type="tel" inputmode="tel" autocomplete="off"></div>
+      <button class="primary" id="cAdd">הוספת אדם</button>
       <button id="cCancel" hidden>ביטול</button>
     </div>
     <p class="muted" id="cErr" role="alert"></p>
@@ -234,7 +243,8 @@
     <div id="oRows"></div>
     <button class="primary" id="oSave" hidden>שמירת מה שנקרא</button>
   </div>
-  <input id="cSearch" type="search" placeholder="חיפוש לפי שם או מספר">
+  <label for="cSearch">חיפוש באנשים השמורים</label>
+  <input id="cSearch" type="search" placeholder="שם או מספר">
   <div id="people" style="margin-top:10px"></div>
 </section>
 
@@ -275,7 +285,7 @@
     <h2 style="margin-top:0">לשלוח</h2>
     <label class="row" style="color:inherit"><input type="checkbox" id="xSched" style="width:auto"> לכלול גם את התזמונים</label>
     <div class="row" style="margin-top:10px">
-      <button class="primary" id="xShare">שיתוף</button>
+      <button class="primary" id="xShare">שיתוף הנתונים</button>
       <button id="xCopy">העתקת קוד</button>
     </div>
     <p class="muted" id="xMsg" role="status"></p>
@@ -287,7 +297,7 @@
     <label for="iFile">או בחירת הקובץ שקיבלתם</label>
     <input id="iFile" type="file" accept=".txt,.json,text/plain,application/json">
     <p class="muted" id="iMsg" role="status"></p>
-    <button class="primary" id="iGo">ייבוא</button>
+    <button class="primary" id="iGo">ייבוא הנתונים</button>
   </div>
 </section>
 
@@ -314,7 +324,7 @@
 "use strict";
 const KEY = "wa-scheduler-v1";
 // Bump on every release: the app compares it with the copy on the server to offer an update.
-const VERSION = "18";
+const VERSION = "19";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -511,10 +521,10 @@ function renderChips() {
   chips(b, db.contacts.filter(finder(q)), picked.s, "");
   a.dataset.set = "sl"; b.dataset.set = "s";
   box.append(...a.children.length ? [a] : [], b);
-  if (!db.contacts.length) b.innerHTML = '<span class="muted">עוד אין אנשים. הוסיפו מספר למטה.</span>';
+  if (!db.contacts.length) b.innerHTML = '<span class="muted">עוד אין אנשים לבחור מהם.</span> <button type="button" data-go="newNumber">הוספת מספר ראשון</button>';
   else if (!a.children.length && !b.children.length) b.innerHTML = NO_MATCH;
   chips($("lPick"), db.contacts.filter(finder($("lFind").value)), picked.l, "");
-  if (!db.contacts.length) $("lPick").innerHTML = '<span class="muted">קודם מוסיפים אנשים בלשונית "אנשים".</span>';
+  if (!db.contacts.length) $("lPick").innerHTML = '<span class="muted">רשימה בונים מאנשים שמורים, ועוד אין כאלה.</span> <button type="button" data-go="people">מעבר להוספת אנשים</button>';
   else if (!$("lPick").children.length) $("lPick").innerHTML = NO_MATCH;
   renderCounts();
 }
@@ -552,7 +562,7 @@ function renderHome() {
       <p class="muted" style="margin:8px 0 12px">ההודעה מועתקת ווואטסאפ נפתח. בוחרים שם את רשימת התפוצה ושולחים; אם היא לא מופיעה לבחירה, פותחים אותה ומדביקים.</p>` : ""}
       <div class="muted">או בוואטסאפ, אחד אחד:</div>
       <div class="chips">${left.map((c) => `<button data-send="${s.id}" data-c="${c.id}">וואטסאפ ל${esc(c.name)}</button>`).join("")}</div>
-      <button class="link" data-skip="${s.id}">דילוג על הפעם הזאת</button></div>`;
+      <div class="apart"><button class="link" data-skip="${s.id}">דילוג על הפעם הזאת</button></div></div>`;
   }).join("");
   const up = db.schedules.filter((s) => !s.done && s.next > now).sort((a, b) => a.next - b.next);
   $("upcoming").innerHTML = up.length ? up.map((s) => {
@@ -562,7 +572,7 @@ function renderHome() {
       <button class="link" data-del-s="${s.id}">מחיקה</button></div>
       <div class="msg">${esc(s.text)}</div><div class="muted">${esc(r.map((c) => c.name).join(", "))}</div>
       ${calButtons(s.id)}</div>`;
-  }).join("") : '<div class="empty">אין הודעות מתוזמנות.</div>';
+  }).join("") : '<div class="empty">אין הודעות מתוזמנות.<br><button type="button" class="primary" data-go="compose" style="margin-top:12px">כתיבת הודעה ראשונה</button></div>';
   $("log").innerHTML = db.log.length ? db.log.slice(0, 15).map((l) =>
     `<div class="card"><strong>${esc(l.name)}</strong> <span class="muted">${esc(fmt(l.t))}</span><div class="msg">${esc(l.text)}</div></div>`).join("")
     : '<div class="empty">עוד לא נשלח כלום.</div>';
@@ -572,11 +582,11 @@ function renderPeople() {
   $("people").innerHTML = rows.length ? rows.map((c) =>
     `<div class="card row"><div class="grow"><strong>${esc(c.name)}</strong><br><span class="muted ltr">${showPhone(c.phone)}</span></div>
      <button class="edit" data-edit-c="${c.id}">עריכה</button><button class="link" data-del-c="${c.id}">מחיקה</button></div>`).join("")
-    : `<div class="empty">${db.contacts.length ? "אין תוצאות." : "עוד אין אנשים שמורים."}</div>`;
+    : `<div class="empty">${db.contacts.length ? "אין תוצאות." : "עוד אין אנשים שמורים. מוסיפים את הראשון בטופס שלמעלה."}</div>`;
 }
 function renderLists() {
   $("lists").innerHTML = db.lists.map((l) =>
-    `<div class="card"><div class="row"><strong class="grow">${esc(l.name)}</strong><span class="muted">${l.ids.filter(contact).length} אנשים</span>
+    `<div class="card"><div class="row base"><strong class="grow">${esc(l.name)}</strong><span class="muted">${l.ids.filter(contact).length} אנשים</span>
      <button class="edit" data-edit-l="${l.id}">עריכה</button><button class="link" data-del-l="${l.id}">מחיקה</button></div>
      <div class="muted">${esc(l.ids.map(contact).filter(Boolean).map((c) => c.name).join(", "))}</div>
      ${l.wa ? `<div class="muted">רשימת תפוצה בוואטסאפ: <strong>${esc(l.wa)}</strong></div>` : ""}
@@ -585,7 +595,7 @@ function renderLists() {
 }
 function renderTpls() {
   $("tpls").innerHTML = db.templates.map((t) =>
-    `<div class="card"><div class="row"><strong class="grow">${esc(t.title)}</strong>
+    `<div class="card"><div class="row base"><strong class="grow">${esc(t.title)}</strong>
      <button class="edit" data-edit-t="${t.id}">עריכה</button><button class="link" data-del-t="${t.id}">מחיקה</button></div><div class="msg">${esc(t.text)}</div></div>`).join("")
     || '<div class="empty">עוד אין הודעות מוכנות.</div>';
 }
@@ -602,7 +612,7 @@ $("qAdd").onclick = () => {
 // ---- editing: the same form saves a new item or the one being edited ----
 const editing = { c: null, l: null, t: null };
 const FORM = {
-  c: { btn: "cAdd", add: "הוספה", cancel: "cCancel", top: "cName" },
+  c: { btn: "cAdd", add: "הוספת אדם", cancel: "cCancel", top: "cName" },
   l: { btn: "lSave", add: "שמירת הרשימה", cancel: "lCancel", top: "lName" },
   t: { btn: "tSave", add: "שמירת ההודעה", cancel: "tCancel", top: "tTitle" },
 };
@@ -883,6 +893,12 @@ document.addEventListener("click", (e) => {
     const t = db.templates.find((x) => x.id === d.editT);
     $("tTitle").value = t.title; $("tText").value = t.text; $("tErr").textContent = "";
     setEdit("t", t.id); return;
+  } else if (d.go) {
+    // Empty states lead somewhere: to the message box, the new-number form, or the people tab.
+    if (d.go === "people") { document.querySelector('nav [data-tab="people"]').click(); $("cName").focus(); }
+    else if (d.go === "compose") { $("sText").scrollIntoView({ behavior: "smooth", block: "center" }); $("sText").focus({ preventScroll: true }); }
+    else { const box = $("qName").closest("details"); box.open = true; box.scrollIntoView({ behavior: "smooth", block: "center" }); $("qName").focus({ preventScroll: true }); }
+    return;
   } else if (d.bc) { sendBroadcast(db.schedules.find((x) => x.id === d.bc)); toast("ההודעה הועתקה, וואטסאפ נפתח"); }
   else if (d.vcf) { exportVcf(db.lists.find((x) => x.id === d.vcf)); return; }
   else if (d.sms) { sendSms(db.schedules.find((x) => x.id === d.sms)); toast("אפליקציית ההודעות נפתחת"); }
