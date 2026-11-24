@@ -53,6 +53,7 @@
     background: var(--card); color: var(--text); padding: 10px 14px; min-height: 44px; cursor: pointer;
   }
   button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  button.edit { border: 0; background: none; padding: 8px; text-decoration: underline; }
   button.link { border: 0; background: none; color: var(--danger); padding: 8px; min-height: 44px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { border-radius: 999px; padding: 6px 12px; min-height: 36px; font-size: .92rem; }
@@ -80,7 +81,7 @@
     <select id="sTpl"></select>
     <label for="sText">נוסח ההודעה (<span class="ltr">{שם}</span> יוחלף בשם הנמען)</label>
     <textarea id="sText"></textarea>
-    <label>נמענים</label>
+    <div class="row" style="justify-content:space-between"><label>נמענים</label><button class="edit" id="sAll" type="button">בחר הכל</button></div>
     <div class="chips" id="sPick"></div>
     <label for="qPhone">מספר חדש - שם ומספר, יישמר לבחירה מהירה</label>
     <div class="row">
@@ -118,6 +119,7 @@
       <input class="grow" id="cName" placeholder="שם" autocomplete="off">
       <input class="grow" id="cPhone" type="tel" inputmode="tel" placeholder="050-1234567" autocomplete="off">
       <button class="primary" id="cAdd">הוספה</button>
+      <button id="cCancel" hidden>ביטול</button>
     </div>
     <label for="cBulk">הדבקת רשימה - שורה לכל אחד: שם, מספר</label>
     <textarea id="cBulk" placeholder="דנה, 050-1234567"></textarea>
@@ -139,12 +141,12 @@
   <div class="card">
     <label for="lName">שם הרשימה</label>
     <input id="lName" autocomplete="off">
-    <label>מי ברשימה</label>
+    <div class="row" style="justify-content:space-between"><label>מי ברשימה</label><button class="edit" id="lAll" type="button">בחר הכל</button></div>
     <div class="chips" id="lPick"></div>
     <label for="lWa">שם רשימת התפוצה המקבילה בוואטסאפ (לא חובה)</label>
     <input id="lWa" autocomplete="off" placeholder="למשל: מחלקה א">
     <p class="muted" id="lErr" role="alert"></p>
-    <button class="primary" id="lSave">שמירת הרשימה</button>
+    <div class="row"><button class="primary" id="lSave">שמירת הרשימה</button><button id="lCancel" hidden>ביטול</button></div>
   </div>
   <div id="lists"></div>
 </section>
@@ -157,7 +159,7 @@
     <label for="tText">נוסח (<span class="ltr">{שם}</span> יוחלף בשם הנמען)</label>
     <textarea id="tText"></textarea>
     <p class="muted" id="tErr" role="alert"></p>
-    <button class="primary" id="tSave">שמירת ההודעה</button>
+    <div class="row"><button class="primary" id="tSave">שמירת ההודעה</button><button id="tCancel" hidden>ביטול</button></div>
   </div>
   <div id="tpls"></div>
 </section>
@@ -358,13 +360,13 @@ function renderPeople() {
   const rows = db.contacts.filter((c) => !q || c.name.includes(q) || (qd && c.phone.includes(qd.replace(/^0/, ""))));
   $("people").innerHTML = rows.length ? rows.map((c) =>
     `<div class="card row"><div class="grow"><strong>${esc(c.name)}</strong><br><span class="muted ltr">${showPhone(c.phone)}</span></div>
-     <button class="link" data-del-c="${c.id}">מחיקה</button></div>`).join("")
+     <button class="edit" data-edit-c="${c.id}">עריכה</button><button class="link" data-del-c="${c.id}">מחיקה</button></div>`).join("")
     : `<div class="empty">${db.contacts.length ? "אין תוצאות." : "עוד אין אנשים שמורים."}</div>`;
 }
 function renderLists() {
   $("lists").innerHTML = db.lists.map((l) =>
     `<div class="card"><div class="row"><strong class="grow">${esc(l.name)}</strong><span class="muted">${l.ids.filter(contact).length} אנשים</span>
-     <button class="link" data-del-l="${l.id}">מחיקה</button></div>
+     <button class="edit" data-edit-l="${l.id}">עריכה</button><button class="link" data-del-l="${l.id}">מחיקה</button></div>
      <div class="muted">${esc(l.ids.map(contact).filter(Boolean).map((c) => c.name).join(", "))}</div>
      ${l.wa ? `<div class="muted">רשימת תפוצה בוואטסאפ: <strong>${esc(l.wa)}</strong></div>` : ""}
      <button data-vcf="${l.id}" style="margin-top:10px">שמירת אנשי הרשימה באנשי הקשר של הטלפון</button></div>`).join("")
@@ -373,7 +375,7 @@ function renderLists() {
 function renderTpls() {
   $("tpls").innerHTML = db.templates.map((t) =>
     `<div class="card"><div class="row"><strong class="grow">${esc(t.title)}</strong>
-     <button class="link" data-del-t="${t.id}">מחיקה</button></div><div class="msg">${esc(t.text)}</div></div>`).join("")
+     <button class="edit" data-edit-t="${t.id}">עריכה</button><button class="link" data-del-t="${t.id}">מחיקה</button></div><div class="msg">${esc(t.text)}</div></div>`).join("")
     || '<div class="empty">עוד אין הודעות מוכנות.</div>';
 }
 function renderAll() { save(); renderStoreWarn(); renderPickers(); renderHome(); renderPeople(); renderLists(); renderTpls(); }
@@ -385,8 +387,49 @@ $("qAdd").onclick = () => {
   picked.s.add(c.id); $("qName").value = $("qPhone").value = "";
   renderAll();
 };
+// ---- editing: the same form saves a new item or the one being edited ----
+const editing = { c: null, l: null, t: null };
+const FORM = {
+  c: { btn: "cAdd", add: "הוספה", cancel: "cCancel", top: "cName" },
+  l: { btn: "lSave", add: "שמירת הרשימה", cancel: "lCancel", top: "lName" },
+  t: { btn: "tSave", add: "שמירת ההודעה", cancel: "tCancel", top: "tTitle" },
+};
+function setEdit(kind, id) {
+  editing[kind] = id;
+  const f = FORM[kind];
+  $(f.btn).textContent = id ? "שמירת השינוי" : f.add;
+  $(f.cancel).hidden = !id;
+  if (id) { $(f.top).scrollIntoView({ behavior: "smooth", block: "center" }); $(f.top).focus({ preventScroll: true }); }
+}
+function clearForm(kind) {
+  if (kind === "c") $("cName").value = $("cPhone").value = $("cErr").textContent = "";
+  if (kind === "l") { $("lName").value = $("lWa").value = $("lErr").textContent = ""; picked.l.clear(); }
+  if (kind === "t") $("tTitle").value = $("tText").value = $("tErr").textContent = "";
+  setEdit(kind, null);
+}
+["c", "l", "t"].forEach((k) => ($(FORM[k].cancel).onclick = () => { clearForm(k); renderAll(); }));
+function selectAll(set, btn) {
+  const all = db.contacts.every((c) => set.has(c.id));
+  db.contacts.forEach((c) => (all ? set.delete(c.id) : set.add(c.id)));
+  renderPickers();
+}
+$("lAll").onclick = () => selectAll(picked.l);
+$("sAll").onclick = () => selectAll(picked.s);
+
 $("cAdd").onclick = () => {
-  if (addContact($("cName").value, $("cPhone").value, $("cErr"))) { $("cName").value = $("cPhone").value = ""; renderAll(); }
+  const cur = contact(editing.c);
+  if (!cur) {
+    if (addContact($("cName").value, $("cPhone").value, $("cErr"))) { $("cName").value = $("cPhone").value = ""; renderAll(); }
+    return;
+  }
+  const name = $("cName").value.trim(), p = normPhone($("cPhone").value);
+  const dup = db.contacts.find((c) => c.phone === p && c.id !== cur.id);
+  const err = !name || !p ? "צריך שם ומספר טלפון תקין." : dup ? "המספר כבר שמור בשם " + dup.name + "." : "";
+  $("cErr").textContent = err;
+  if (err) return;
+  cur.name = name; cur.phone = p;
+  db.contacts.sort((a, b) => a.name.localeCompare(b.name, "he"));
+  clearForm("c"); renderAll();
 };
 $("cBulkAdd").onclick = () => {
   const bad = [];
@@ -549,22 +592,40 @@ $("lSave").onclick = () => {
   const err = !name ? "חסר שם לרשימה." : !picked.l.size ? "צריך לבחור לפחות אדם אחד." : "";
   $("lErr").textContent = err;
   if (err) return;
-  db.lists.push({ id: uid(), name, ids: [...picked.l], wa: $("lWa").value.trim() });
-  picked.l.clear(); $("lName").value = $("lWa").value = "";
+  const cur = db.lists.find((x) => x.id === editing.l);
+  if (cur) Object.assign(cur, { name, ids: [...picked.l], wa: $("lWa").value.trim() });
+  else db.lists.push({ id: uid(), name, ids: [...picked.l], wa: $("lWa").value.trim() });
+  clearForm("l");
   renderAll();
 };
 $("tSave").onclick = () => {
   const title = $("tTitle").value.trim(), text = $("tText").value.trim();
   $("tErr").textContent = title && text ? "" : "צריך כותרת ונוסח.";
   if (!title || !text) return;
-  db.templates.push({ id: uid(), title, text });
-  $("tTitle").value = $("tText").value = "";
+  const cur = db.templates.find((x) => x.id === editing.t);
+  if (cur) Object.assign(cur, { title, text });
+  else db.templates.push({ id: uid(), title, text });
+  clearForm("t");
   renderAll();
 };
 document.addEventListener("click", (e) => {
   const d = e.target.dataset;
   if (d.send) {
     sendTo(db.schedules.find((x) => x.id === d.send), contact(d.c));
+  } else if (d.editC) {
+    const c = contact(d.editC);
+    $("cName").value = c.name; $("cPhone").value = "0" + c.phone.replace(/^972/, ""); $("cErr").textContent = "";
+    if (!c.phone.startsWith("972")) $("cPhone").value = showPhone(c.phone);
+    setEdit("c", c.id); return;
+  } else if (d.editL) {
+    const l = db.lists.find((x) => x.id === d.editL);
+    $("lName").value = l.name; $("lWa").value = l.wa || ""; $("lErr").textContent = "";
+    picked.l.clear(); l.ids.filter(contact).forEach((id) => picked.l.add(id));
+    renderPickers(); setEdit("l", l.id); return;
+  } else if (d.editT) {
+    const t = db.templates.find((x) => x.id === d.editT);
+    $("tTitle").value = t.title; $("tText").value = t.text; $("tErr").textContent = "";
+    setEdit("t", t.id); return;
   } else if (d.bc) sendBroadcast(db.schedules.find((x) => x.id === d.bc));
   else if (d.vcf) { exportVcf(db.lists.find((x) => x.id === d.vcf)); return; }
   else if (d.sms) sendSms(db.schedules.find((x) => x.id === d.sms));
@@ -574,10 +635,11 @@ document.addEventListener("click", (e) => {
   else if (d.delC) {
     if (!confirm("למחוק את " + contact(d.delC).name + "?")) return;
     db.contacts = db.contacts.filter((x) => x.id !== d.delC);
+    if (editing.c === d.delC) clearForm("c");
     Object.values(picked).forEach((set) => set.delete(d.delC));
   }
-  else if (d.delL) { if (!confirm("למחוק את הרשימה?")) return; db.lists = db.lists.filter((x) => x.id !== d.delL); picked.sl.delete(d.delL); }
-  else if (d.delT) { if (!confirm("למחוק את ההודעה?")) return; db.templates = db.templates.filter((x) => x.id !== d.delT); }
+  else if (d.delL) { if (!confirm("למחוק את הרשימה?")) return; db.lists = db.lists.filter((x) => x.id !== d.delL); picked.sl.delete(d.delL); if (editing.l === d.delL) clearForm("l"); }
+  else if (d.delT) { if (!confirm("למחוק את ההודעה?")) return; db.templates = db.templates.filter((x) => x.id !== d.delT); if (editing.t === d.delT) clearForm("t"); }
   else if (d.tab) {
     document.querySelectorAll("section").forEach((s) => (s.hidden = s.id !== "tab-" + d.tab));
     document.querySelectorAll("nav button").forEach((b) => b.toggleAttribute("aria-current", false));
