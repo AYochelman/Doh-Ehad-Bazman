@@ -95,6 +95,7 @@
       <div><label for="sRepeat">חזרה</label>
         <select id="sRepeat">
           <option value="once">חד פעמי</option><option value="daily">כל יום</option>
+          <option value="workdays">כל יום חוץ משישי ושבת</option>
           <option value="weekly">כל שבוע</option><option value="monthly">כל חודש</option>
           <option value="yearly">כל שנה</option>
         </select></div>
@@ -248,7 +249,13 @@ function addContact(name, phone, errEl) {
 // k-th occurrence counted from the anchor, so a monthly 31st stays the 31st where it exists.
 function occurrence(anchor, repeat, k) {
   const d = new Date(anchor);
-  if (repeat === "daily") d.setDate(d.getDate() + k);
+  if (repeat === "workdays") {
+    // Sunday to Thursday. An anchor on Friday or Saturday starts on the Sunday after it.
+    const weekend = () => d.getDay() === 5 || d.getDay() === 6;
+    while (weekend()) d.setDate(d.getDate() + 1);
+    for (let i = 0; i < k; i++) do d.setDate(d.getDate() + 1); while (weekend());
+  }
+  else if (repeat === "daily") d.setDate(d.getDate() + k);
   else if (repeat === "weekly") d.setDate(d.getDate() + 7 * k);
   else if (repeat === "monthly" || repeat === "yearly") {
     const day = d.getDate();
@@ -269,7 +276,7 @@ function finishOccurrence(s) {
   do { s.k++; s.next = occurrence(s.anchor, s.repeat, s.k); } while (s.next <= Date.now());
 }
 const fmt = (t) => new Date(t).toLocaleString("he-IL", { weekday: "short", day: "numeric", month: "numeric", year: "2-digit", hour: "2-digit", minute: "2-digit" });
-const REPEAT = { once: "חד פעמי", daily: "כל יום", weekly: "כל שבוע", monthly: "כל חודש", yearly: "כל שנה" };
+const REPEAT = { once: "חד פעמי", daily: "כל יום", workdays: "כל יום חוץ משישי ושבת", weekly: "כל שבוע", monthly: "כל חודש", yearly: "כל שנה" };
 
 // ---- calendar reminder: the only way to be alerted on an iPhone while the app is closed, without a server ----
 function icsFor(s) {
@@ -278,7 +285,7 @@ function icsFor(s) {
   const txt = (v) => v.replace(/\\/g, "\\\\").replace(/([,;])/g, "\\$1").replace(/\r?\n/g, "\\n");
   const names = recipients(s).map((c) => c.name).join(", ");
   const url = location.href.split("#")[0];
-  const rule = { daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" }[s.repeat];
+  const rule = { daily: "DAILY", workdays: "WEEKLY;BYDAY=SU,MO,TU,WE,TH", weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" }[s.repeat];
   return [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Doh 1 Bazman//HE", "BEGIN:VEVENT",
     "UID:" + s.id + "@doh-ehad-bazman", "DTSTAMP:" + local(new Date()), "DTSTART:" + local(d), "DURATION:PT5M",
@@ -535,6 +542,7 @@ $("sTpl").onchange = () => { const t = db.templates.find((x) => x.id === $("sTpl
 $("sSave").onclick = () => {
   const text = $("sText").value.trim(), when = new Date($("sWhen").value).getTime();
   const s = { id: uid(), text, to: [...picked.s], lists: [...picked.sl], repeat: $("sRepeat").value, anchor: when, next: when, k: 0, sent: {}, done: false };
+  if (when) s.next = occurrence(when, s.repeat, 0);
   const err = !text ? "חסר נוסח להודעה." : !recipients(s).length ? "צריך לבחור לפחות נמען אחד." : !when ? "צריך לבחור תאריך ושעה." : "";
   $("sErr").textContent = err;
   if (err) return;
@@ -543,11 +551,11 @@ $("sSave").onclick = () => {
   renderAll();
   const ok = $("sOk");
   ok.hidden = false;
-  if (when <= Date.now()) {
+  if (s.next <= Date.now()) {
     ok.innerHTML = "<strong>נשמר, והזמן כבר הגיע.</strong> ההודעה מחכה למעלה תחת \"מוכן לשליחה\".";
     $("dueBox").scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
-    ok.innerHTML = `<strong>התזמון נשמר ל-${esc(fmt(when))}.</strong><div class="muted">האפליקציה לא יכולה להתריע כשהיא סגורה. כדי לקבל התראה בזמן, מוסיפים תזכורת ליומן של הטלפון.</div>
+    ok.innerHTML = `<strong>התזמון נשמר ל-${esc(fmt(s.next))}.</strong><div class="muted">האפליקציה לא יכולה להתריע כשהיא סגורה. כדי לקבל התראה בזמן, מוסיפים תזכורת ליומן של הטלפון.</div>
       <button class="primary" data-ics="${s.id}" style="margin-top:10px">הוספת תזכורת ליומן</button>`;
   }
 };
@@ -725,10 +733,10 @@ function importCode(code) {
     const text = str(x?.text), anchor = Number(x?.anchor), repeat = REPEAT[x?.repeat] ? x.repeat : "";
     if (!text || !repeat || !Number.isFinite(anchor)) return;
     if (db.schedules.some((y) => y.text === text && y.anchor === anchor && y.repeat === repeat)) return;
-    const sc = { id: uid(), text, repeat, anchor, next: anchor, k: 0, sent: {}, done: false,
+    const sc = { id: uid(), text, repeat, anchor, next: occurrence(anchor, repeat, 0), k: 0, sent: {}, done: false,
       to: arr(x.phones).map((p) => idOf(p)).filter(Boolean),
       lists: arr(x.lists).map((name) => db.lists.find((l) => l.name === str(name))?.id).filter(Boolean) };
-    if (anchor <= Date.now()) { if (repeat === "once") return; finishOccurrence(sc); }
+    if (sc.next <= Date.now()) { if (repeat === "once") return; finishOccurrence(sc); }
     if (recipients(sc).length) { db.schedules.push(sc); n.schedules++; }
   });
   db.contacts.sort((a, b) => a.name.localeCompare(b.name, "he"));
