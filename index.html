@@ -314,7 +314,7 @@
 "use strict";
 const KEY = "wa-scheduler-v1";
 // Bump on every release: the app compares it with the copy on the server to offer an update.
-const VERSION = "17";
+const VERSION = "18";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -429,7 +429,9 @@ function icsFor(s) {
   const d = new Date(s.next), p2 = (n) => String(n).padStart(2, "0");
   const local = (x) => `${x.getFullYear()}${p2(x.getMonth() + 1)}${p2(x.getDate())}T${p2(x.getHours())}${p2(x.getMinutes())}00`;
   const txt = (v) => v.replace(/\\/g, "\\\\").replace(/([,;])/g, "\\$1").replace(/\r?\n/g, "\\n");
-  const names = recipients(s).map((c) => c.name).join(", ");
+  // A long recipient list makes an unreadable calendar title, so past three people it is a count.
+  const who = recipients(s);
+  const names = who.length > 3 ? who.length + " אנשים" : who.map((c) => c.name).join(", ");
   const url = location.href.split("#")[0];
   const BY = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
   const rule = { daily: "DAILY", workdays: "WEEKLY;BYDAY=SU,MO,TU,WE,TH", days: "WEEKLY;BYDAY=" + cleanDays(s.days).map((n) => BY[n]).join(","), weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" }[s.repeat];
@@ -437,7 +439,7 @@ function icsFor(s) {
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Doh 1 Bazman//HE", "BEGIN:VEVENT",
     "UID:" + s.id + "@doh-ehad-bazman", "DTSTAMP:" + local(new Date()), "DTSTART:" + local(d), "DURATION:PT5M",
     ...(rule ? ["RRULE:FREQ=" + rule] : []),
-    "SUMMARY:" + txt("דוח 1 בזמן: לשלוח ל" + names),
+    "SUMMARY:" + txt("דוח 1 בזמן: לשלוח ל" + (who.length > 3 ? "-" : "") + names),
     "DESCRIPTION:" + txt(s.text + "\n\nלשליחה פותחים את האפליקציה: " + url),
     ...(url.startsWith("http") ? ["URL:" + url] : []),
     "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + txt("דוח 1 בזמן: הגיע הזמן לשלוח"), "TRIGGER:PT0M", "END:VALARM",
@@ -470,7 +472,7 @@ function gcalUrl(s) {
   const rrule = icsFor(s).split("\r\n").find((l) => l.startsWith("RRULE:"));
   const q = new URLSearchParams({
     action: "TEMPLATE",
-    text: "דוח 1 בזמן: לשלוח ל" + recipients(s).map((c) => c.name).join(", ").slice(0, 80),
+    text: recipients(s).length > 3 ? `דוח 1 בזמן: לשלוח ל-${recipients(s).length} אנשים` : "דוח 1 בזמן: לשלוח ל" + recipients(s).map((c) => c.name).join(", "),
     dates: local(start) + "/" + local(end),
     ctz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     details: s.text + "\n\nלשליחה פותחים את האפליקציה: " + location.href.split(/[?#]/)[0],

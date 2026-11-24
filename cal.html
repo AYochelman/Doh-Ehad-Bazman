@@ -13,9 +13,10 @@
   .card { border: 1px solid rgb(60 50 0 / .13); border-radius: 20px; padding: 14px; margin-bottom: 16px; background: #fff7cc; }
   .muted { color: #6b675c; font-size: .9rem; }
   .msg { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 8px; }
-  a.btn { display: block; text-align: center; background: #ffd60a; color: #1c1b17; font-weight: 700;
-    text-decoration: none; border-radius: 12px; padding: 14px; }
-  a.btn:active { transform: scale(.97); }
+  .btn { display: block; width: 100%; text-align: center; background: #ffd60a; color: #1c1b17; font: inherit; font-weight: 700;
+    border: 0; border-radius: 12px; padding: 14px; margin-bottom: 10px; cursor: pointer; }
+  .btn.alt { background: #fff; border: 1px solid rgb(60 50 0 / .2); font-weight: 500; }
+  .btn:active { transform: scale(.97); }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -27,7 +28,12 @@
     <div class="muted" id="when"></div>
     <div class="msg" id="desc"></div>
   </div>
-  <a class="btn" id="add" hidden download="doh1-reminder.ics">הוספה ליומן</a>
+  <button class="btn" id="add" type="button" hidden>הוספה ליומן</button>
+  <div id="more" hidden>
+    <p class="muted">לא נפתח חלון של היומן? אפשר לנסות דרך אחרת:</p>
+    <button class="btn alt" id="add2" type="button">פתיחת קובץ האירוע</button>
+    <button class="btn alt" id="add3" type="button">שיתוף קובץ האירוע</button>
+  </div>
   <p class="muted" id="note">אחרי ההוספה אפשר לסגור את הדף ולחזור לאפליקציה.</p>
 </main>
 <script>
@@ -47,7 +53,19 @@ if (!ics.startsWith("BEGIN:VCALENDAR")) {
   $("title").textContent = field("SUMMARY");
   $("desc").textContent = field("DESCRIPTION").split("\n\n")[0];
   if (t) $("when").textContent = new Date(t[1], t[2] - 1, t[3], t[4], t[5]).toLocaleString("he-IL", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) + (field("RRULE") ? " · חוזר" : "");
-  $("add").href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+  // Safari shows its "add to calendar" sheet when it is taken to a calendar file. Which form of the file it
+  // accepts has changed between iOS versions, so the main button tries the in-memory file, and two more
+  // ways are offered right after in case nothing opens.
+  const file = () => new File([ics], "doh1-reminder.ics", { type: "text/calendar" });
+  $("add").onclick = () => {
+    location.href = URL.createObjectURL(file());
+    $("more").hidden = false;
+  };
+  $("add2").onclick = () => { location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics); };
+  $("add3").onclick = async () => {
+    try { await navigator.share({ files: [file()] }); }
+    catch (e) { if (e.name !== "AbortError") $("note").textContent = "השיתוף לא נתמך בדפדפן הזה."; }
+  };
   $("ev").hidden = $("add").hidden = false;
 }
 </script>
