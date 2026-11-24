@@ -16,14 +16,23 @@
 <style>
   :root {
     color-scheme: light;
-    --bg: #ffffff; --card: #ffffff; --field: #faf8f0; --text: #1c1b17; --muted: #6b675c; --line: #ebe7d9;
+    --bg: #ffffff; --card: #ffffff; --field: #faf8f0; --text: #1c1b17; --muted: #6b675c;
+    /* A see-through border darkens whatever it sits on, so it works on white and on the yellow cards alike. */
+    --line: rgb(60 50 0 / .13);
     --accent: #ffd60a; --on-accent: #1c1b17; --soft: #fff7cc; --danger: #b3261e;
+    /* Concentric corners: inner radius = card radius - card padding. */
+    --pad: 12px; --r-card: 20px; --r-in: calc(var(--r-card) - var(--pad));
+    --out: cubic-bezier(.2, .8, .2, 1); --inout: cubic-bezier(.65, 0, .35, 1);
+  }
+  @supports (color: oklch(0 0 0)) {
+    :root { --accent: oklch(0.885 0.18 96); --soft: oklch(0.97 0.07 100); }
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; direction: rtl; background: var(--bg); color: var(--text);
     font-family: "Heebo", "Segoe UI", "Arial Hebrew", Arial, sans-serif; line-height: 1.5;
-    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    padding-bottom: calc(76px + env(safe-area-inset-bottom)); min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
   }
   main { max-width: 620px; margin-inline: auto; padding: 16px; }
   h1 { font-size: 1.35rem; margin: 4px 0 14px; }
@@ -31,7 +40,8 @@
   .brand img { border-radius: 13px; }
   .brand h1 { margin: 0; }
   h2 { font-size: 1rem; margin: 22px 0 8px; color: var(--muted); font-weight: 500; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--pad); margin-bottom: 10px; }
+  .card .card { border-radius: var(--r-in); }
   :focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
   .due { border-color: var(--accent); background: var(--soft); }
   .warnbox { border-color: var(--danger); }
@@ -42,16 +52,23 @@
   label { display: block; font-size: .88rem; color: var(--muted); margin: 10px 0 4px; }
   input, textarea, select {
     width: 100%; font: inherit; color: inherit; background: var(--field);
-    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: var(--r-in); padding: 10px 12px;
+    transition: border-color .15s, box-shadow .15s;
   }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--text); box-shadow: 0 0 0 3px var(--soft); }
   textarea { min-height: 96px; resize: vertical; }
   /* iOS gives date inputs an intrinsic width that ignores the container, and RTL scrambles the date parts. */
   input[type=datetime-local] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; min-height: 46px; direction: ltr; text-align: right; }
   input[type=tel], .ltr { direction: ltr; text-align: left; unicode-bidi: isolate; }
   button {
-    font: inherit; font-weight: 500; border-radius: 10px; border: 1px solid var(--line);
+    font: inherit; font-weight: 500; border-radius: var(--r-in); border: 1px solid var(--line);
     background: var(--card); color: var(--text); padding: 10px 14px; min-height: 44px; cursor: pointer;
+    transition: transform .1s var(--out), background-color .15s, border-color .15s, opacity .15s;
+    touch-action: manipulation;
   }
+  /* Every button answers the finger at once, before anything else happens. */
+  button:active { transform: scale(.97); }
+  button.busy { opacity: .6; pointer-events: none; }
   button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   button.edit { border: 0; background: none; padding: 8px; text-decoration: underline; }
   button.link { border: 0; background: none; color: var(--danger); padding: 8px; min-height: 44px; }
@@ -64,8 +81,56 @@
     border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
   }
   nav button { flex: 1; border: 0; border-radius: 0; background: none; color: var(--muted); min-height: 60px; font-size: .9rem; }
-  nav button[aria-current=page] { color: var(--text); font-weight: 700; box-shadow: inset 0 4px 0 var(--accent); }
+  nav button { transition: color .2s; }
+  nav button[aria-current=page] { color: var(--text); font-weight: 700; }
+  /* One bar that slides between tabs, instead of a mark that jumps. */
+  #navBar { position: absolute; top: 0; left: 0; height: 4px; background: var(--accent); border-radius: 0 0 4px 4px; transition: transform .28s var(--inout), width .28s var(--inout); }
   section[hidden] { display: none; }
+
+  /* ---- motion: entrances ease out, exits are shorter, nothing bounces ---- */
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  @keyframes pop { from { opacity: 0; transform: scale(.95); } }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--accent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+  @keyframes swap { from { opacity: 0; filter: blur(4px); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .rise { animation: rise .26s var(--out) both; animation-delay: calc(var(--i, 0) * 30ms); }
+  .pop { animation: pop .2s var(--out) both; transform-origin: top right; }
+  .swap { animation: swap .2s var(--out); }
+  .fresh { animation: pulse .7s var(--out); }
+  .chip, .daychip { transition: background-color .15s, border-color .15s, transform .1s var(--out); }
+
+  #toast {
+    position: fixed; inset-inline: 16px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 5;
+    display: flex; justify-content: center; pointer-events: none;
+  }
+  #toast div {
+    display: flex; align-items: center; gap: 8px; max-width: 100%; background: var(--text); color: #fff;
+    border-radius: 999px; padding: 10px 16px 10px 12px; font-weight: 500; box-shadow: 0 6px 20px rgb(0 0 0 / .18);
+    opacity: 0; transform: translateY(12px) scale(.95); transition: opacity .16s, transform .16s var(--out);
+  }
+  #toast div.on { opacity: 1; transform: none; transition-duration: .2s; }
+  #toast i { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); flex: none; position: relative; }
+  #toast i::after { content: ""; position: absolute; inset: 5px 8px 7px 8px; border: solid var(--text); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
+  #toast div.on i { animation: pulse .7s var(--out) .1s; }
+
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 8px 0; }
+  .bar i { display: block; height: 100%; width: 100%; background: var(--text); border-radius: 3px; transform-origin: right; transform: scaleX(var(--p, 0)); transition: transform .3s var(--inout); }
+  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--text); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; margin-inline-end: 6px; }
+
+  /* A long list of people scrolls inside its own box; the faded edge says there is more. */
+  .chips.scroll { max-height: 190px; overflow-y: auto; padding-bottom: 14px;
+    -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); }
+
+  details { margin-top: 10px; }
+  summary { cursor: pointer; padding: 10px 0; font-weight: 500; list-style: none; display: flex; align-items: center; gap: 8px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "+"; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--field); border: 1px solid var(--line); transition: transform .2s var(--out); }
+  details[open] > summary::before { transform: rotate(45deg); }
+  details[open] > :not(summary) { animation: rise .2s var(--out) both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+  }
 </style>
 </head>
 <body>
@@ -84,13 +149,16 @@
     <textarea id="sText"></textarea>
     <div class="row" style="justify-content:space-between"><label for="sFind">נמענים <span id="sCount"></span></label><button class="edit" id="sAll" type="button">בחר הכל</button></div>
     <input id="sFind" type="search" placeholder="חיפוש לפי שם או מספר" autocomplete="off" style="margin-bottom:8px">
-    <div class="chips" id="sPick"></div>
-    <label for="qPhone">מספר חדש - שם ומספר, יישמר לבחירה מהירה</label>
-    <div class="row">
-      <input class="grow" id="qName" placeholder="שם" autocomplete="off">
-      <input class="grow" id="qPhone" type="tel" inputmode="tel" placeholder="050-1234567" autocomplete="off">
-      <button id="qAdd">הוספה</button>
-    </div>
+    <div class="chips scroll" id="sPick"></div>
+    <details>
+      <summary>הוספת מספר חדש</summary>
+      <label for="qPhone">שם ומספר - יישמר לבחירה מהירה</label>
+      <div class="row">
+        <input class="grow" id="qName" placeholder="שם" autocomplete="off">
+        <input class="grow" id="qPhone" type="tel" inputmode="tel" placeholder="050-1234567" autocomplete="off">
+        <button id="qAdd">הוספה</button>
+      </div>
+    </details>
     <div>
       <div><label for="sWhen">מתי</label><input id="sWhen" type="datetime-local"></div>
       <div><label for="sRepeat">חזרה</label>
@@ -125,13 +193,20 @@
       <button class="primary" id="cAdd">הוספה</button>
       <button id="cCancel" hidden>ביטול</button>
     </div>
-    <label for="cBulk">הדבקת רשימה - שורה לכל אחד: שם, מספר</label>
-    <textarea id="cBulk" placeholder="דנה, 050-1234567"></textarea>
     <p class="muted" id="cErr" role="alert"></p>
-    <button id="cBulkAdd">הוספת הרשימה</button>
-    <label for="oFile">ייבוא מתמונה - צילום מסך של אקסל, או כל תמונה שיש בה מספר</label>
-    <input id="oFile" type="file" accept="image/*" multiple>
-    <p class="muted" id="oMsg" role="status">הקריאה נעשית בטלפון. התמונה לא נשלחת לשום מקום.</p>
+    <details>
+      <summary>הוספת כמה אנשים בבת אחת</summary>
+      <label for="cBulk">הדבקת רשימה - שורה לכל אחד: שם, מספר</label>
+      <textarea id="cBulk" placeholder="דנה, 050-1234567"></textarea>
+      <button id="cBulkAdd" style="margin-top:8px">הוספת הרשימה</button>
+    </details>
+    <details id="oBox">
+      <summary>ייבוא מתמונה</summary>
+      <label for="oFile">צילום מסך של אקסל, או כל תמונה שיש בה מספר</label>
+      <input id="oFile" type="file" accept="image/*" multiple>
+    </details>
+    <div class="bar" id="oBar" hidden><i></i></div>
+    <p class="muted" id="oMsg" role="status">הקריאה מתמונה נעשית בטלפון. התמונה לא נשלחת לשום מקום.</p>
     <div id="oRows"></div>
     <button class="primary" id="oSave" hidden>שמירת מה שנקרא</button>
   </div>
@@ -147,7 +222,7 @@
     <input id="lName" autocomplete="off">
     <div class="row" style="justify-content:space-between"><label for="lFind">מי ברשימה <span id="lCount"></span></label><button class="edit" id="lAll" type="button">בחר הכל</button></div>
     <input id="lFind" type="search" placeholder="חיפוש לפי שם או מספר" autocomplete="off" style="margin-bottom:8px">
-    <div class="chips" id="lPick"></div>
+    <div class="chips scroll" id="lPick"></div>
     <label for="lWa">שם רשימת התפוצה המקבילה בוואטסאפ (לא חובה)</label>
     <input id="lWa" autocomplete="off" placeholder="למשל: מחלקה א">
     <p class="muted" id="lErr" role="alert"></p>
@@ -193,7 +268,8 @@
 </section>
 
 </main>
-<nav>
+<div id="toast" role="status" aria-live="polite"><div><i></i><span></span></div></div>
+<nav><span id="navBar"></span>
   <button data-tab="home" aria-current="page">תזמון</button>
   <button data-tab="people">אנשים</button>
   <button data-tab="lists">רשימות</button>
@@ -205,7 +281,7 @@
 "use strict";
 const KEY = "wa-scheduler-v1";
 // Bump on every release: the app compares it with the copy on the server to offer an update.
-const VERSION = "13";
+const VERSION = "14";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -213,6 +289,34 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 let db = { contacts: [], lists: [], templates: [], schedules: [], log: [] };
 try { const raw = localStorage.getItem(KEY); if (raw) db = Object.assign(db, JSON.parse(raw)); } catch {}
 let storeOk = true;
+// ---- feedback: every action is answered on screen ----
+let toastTimer;
+function toast(msg) {
+  const box = $("toast").firstElementChild;
+  box.lastElementChild.textContent = msg;
+  box.classList.remove("on"); void box.offsetWidth; box.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => box.classList.remove("on"), 2200);
+}
+// Replays a one-shot animation class on an element.
+function play(el, cls) {
+  if (!el) return;
+  el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  el.addEventListener("animationend", () => el.classList.remove(cls), { once: true });
+}
+// Rows of a freshly shown tab come in one after the other.
+function stagger(root) {
+  [...root.querySelectorAll(".card, h1, h2")].filter((el) => el.offsetParent).slice(0, 14).forEach((el, i) => { el.style.setProperty("--i", i); play(el, "rise"); });
+}
+function moveNavBar() {
+  const cur = document.querySelector("nav button[aria-current]"), bar = $("navBar");
+  if (!cur) return;
+  bar.style.width = cur.offsetWidth + "px";
+  bar.style.transform = `translateX(${cur.offsetLeft}px)`;
+}
+addEventListener("resize", moveNavBar);
+// iOS only applies :active to buttons when the page listens for touches.
+document.addEventListener("touchstart", () => {}, { passive: true });
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); storeOk = localStorage.getItem(KEY) !== null; } catch { storeOk = false; } };
 const installed = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
 navigator.storage?.persist?.().catch(() => {});
@@ -398,9 +502,10 @@ function renderHome() {
   const now = Date.now();
   const due = db.schedules.filter((s) => !s.done && s.next <= now);
   $("dueBox").innerHTML = due.map((s) => {
-    const left = recipients(s).filter((c) => !s.sent[c.id]);
-    return `<div class="card due"><strong>מוכן לשליחה</strong> <span class="muted">${esc(fmt(s.next))}</span>
+    const all = recipients(s), left = all.filter((c) => !s.sent[c.id]), done = all.length - left.length;
+    return `<div class="card due" data-due="${s.id}"><strong>מוכן לשליחה</strong> <span class="muted">${esc(fmt(s.next))}</span>
       <div class="msg">${esc(s.text)}</div>
+      ${done ? `<div class="muted">נשלח ל-${done} מתוך ${all.length}. נשארו ${left.length}.</div><div class="bar"><i style="--p:${done / all.length}"></i></div>` : ""}
       <button class="primary" data-sms="${s.id}">${left.length > 1 ? `SMS לכולם בבת אחת (${left.length})` : `SMS ל${esc(left[0]?.name || "")}`}</button>
       <p class="muted" style="margin:8px 0 12px">אפליקציית ההודעות תיפתח עם ${left.length > 1 ? "כל המספרים" : "המספר"} וההודעה, ושולחים בלחיצה אחת. עובד גם למספרים שלא שמורים בטלפון.</p>
       ${left.length > 1 ? `<button data-bc="${s.id}">וואטסאפ לרשימת תפוצה${waNames(s) ? ": " + esc(waNames(s)) : ""}</button>
@@ -452,6 +557,7 @@ $("qAdd").onclick = () => {
   if (!c) return;
   picked.s.add(c.id); $("qName").value = $("qPhone").value = "";
   renderAll();
+  toast(c.name + " נוסף ונבחר");
 };
 // ---- editing: the same form saves a new item or the one being edited ----
 const editing = { c: null, l: null, t: null };
@@ -463,7 +569,8 @@ const FORM = {
 function setEdit(kind, id) {
   editing[kind] = id;
   const f = FORM[kind];
-  $(f.btn).textContent = id ? "שמירת השינוי" : f.add;
+  const label = id ? "שמירת השינוי" : f.add;
+  if ($(f.btn).textContent !== label) { $(f.btn).textContent = label; play($(f.btn), "swap"); }
   $(f.cancel).hidden = !id;
   if (id) { $(f.top).scrollIntoView({ behavior: "smooth", block: "center" }); $(f.top).focus({ preventScroll: true }); }
 }
@@ -487,7 +594,8 @@ $("sAll").onclick = () => selectAll(picked.s, $("sFind"));
 $("cAdd").onclick = () => {
   const cur = contact(editing.c);
   if (!cur) {
-    if (addContact($("cName").value, $("cPhone").value, $("cErr"))) { $("cName").value = $("cPhone").value = ""; renderAll(); }
+    const before = db.contacts.length, c = addContact($("cName").value, $("cPhone").value, $("cErr"));
+    if (c && db.contacts.length > before) { $("cName").value = $("cPhone").value = ""; renderAll(); toast(c.name + " נוסף"); }
     return;
   }
   const name = $("cName").value.trim(), p = normPhone($("cPhone").value);
@@ -497,7 +605,7 @@ $("cAdd").onclick = () => {
   if (err) return;
   cur.name = name; cur.phone = p;
   db.contacts.sort((a, b) => a.name.localeCompare(b.name, "he"));
-  clearForm("c"); renderAll();
+  clearForm("c"); renderAll(); toast("השינוי נשמר");
 };
 $("cBulkAdd").onclick = () => {
   const bad = [];
@@ -511,6 +619,7 @@ $("cBulkAdd").onclick = () => {
   $("cBulk").value = bad.join("\n");
   $("cErr").textContent = `נוספו ${added}.` + (bad.length ? ` ${bad.length} שורות לא נקלטו ונשארו בתיבה - צריך שם ומספר בכל שורה.` : "");
   renderAll();
+  if (added) toast(`נוספו ${added} אנשים`);
 };
 $("cSearch").oninput = renderPeople;
 
@@ -542,17 +651,22 @@ function addOcrRow(r) {
 $("oFile").onchange = async () => {
   const files = [...$("oFile").files];
   if (!files.length) return;
-  $("oMsg").textContent = "קורא את התמונה... בפעם הראשונה זה לוקח יותר זמן.";
+  $("oMsg").innerHTML = '<span class="spin"></span>קורא את התמונה... בפעם הראשונה זה לוקח יותר זמן.';
+  const bar = $("oBar"), setBar = (p) => bar.firstElementChild.style.setProperty("--p", p);
+  bar.hidden = false; setBar(0.03);
+  let fileNo = 0;
   let found = 0;
   try {
     await loadOcr();
-    const worker = await Tesseract.createWorker(["heb", "eng"]);
+    const worker = await Tesseract.createWorker(["heb", "eng"], 1, {
+      logger: (m) => { if (m.status === "recognizing text") setBar((fileNo + m.progress) / files.length); },
+    });
     // The library's default (single block) returns garbage on a spreadsheet grid; automatic layout reads it.
     await worker.setParameters({ tessedit_pageseg_mode: "3" });
     for (const f of files) {
       const { data } = await worker.recognize(f);
       const rows = parseOcr(data.text);
-      rows.forEach(addOcrRow); found += rows.length;
+      rows.forEach(addOcrRow); found += rows.length; fileNo++; setBar(fileNo / files.length);
     }
     await worker.terminate();
     $("oMsg").textContent = found
@@ -561,6 +675,7 @@ $("oFile").onchange = async () => {
   } catch {
     $("oMsg").textContent = "הקריאה נכשלה. בפעם הראשונה צריך חיבור לאינטרנט כדי להוריד את מנוע הקריאה.";
   }
+  bar.hidden = true;
   $("oFile").value = "";
   $("oSave").hidden = !$("oRows").children.length;
 };
@@ -575,11 +690,14 @@ $("oSave").onclick = () => {
   $("oMsg").textContent = `נשמרו ${added}.` + (left ? ` ${left} שורות נשארו - חסר בהן שם או שהמספר לא תקין.` : "");
   $("oSave").hidden = !$("oRows").children.length;
   renderAll();
+  if (added) toast(`נשמרו ${added} אנשים`);
 };
 // ---- weekday picker for the "chosen days" repeat ----
 const pickedDays = new Set();
 function renderDays() {
-  $("sDaysBox").hidden = $("sRepeat").value !== "days";
+  const show = $("sRepeat").value === "days";
+  if (show && $("sDaysBox").hidden) play($("sDaysBox"), "rise");
+  $("sDaysBox").hidden = !show;
   $("sDays").innerHTML = DAY.map((d, n) => `<button type="button" class="daychip" data-day="${n}" aria-pressed="${pickedDays.has(n)}" aria-label="יום ${d}">${d}</button>`).join("");
 }
 $("sRepeat").onchange = () => {
@@ -610,6 +728,8 @@ $("sSave").onclick = () => {
   const ok = $("sOk");
   ok.hidden = false;
   ok.dataset.sid = s.id;
+  play(ok, "pop");
+  toast("התזמון נשמר");
   if (s.next <= Date.now()) {
     ok.innerHTML = "<strong>נשמר, והזמן כבר הגיע.</strong> ההודעה מחכה למעלה תחת \"מוכן לשליחה\".";
     $("dueBox").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -676,32 +796,39 @@ $("sNow").onclick = () => {
   renderAll();
   $("sOk").hidden = true;
   $("dueBox").scrollIntoView({ behavior: "smooth", block: "start" });
+  play(document.querySelector(`[data-due="${s.id}"]`), "fresh");
 };
 $("lSave").onclick = () => {
   const name = $("lName").value.trim();
   const err = !name ? "חסר שם לרשימה." : !picked.l.size ? "צריך לבחור לפחות אדם אחד." : "";
   $("lErr").textContent = err;
   if (err) return;
+  const wasEdit = !!editing.l;
   const cur = db.lists.find((x) => x.id === editing.l);
   if (cur) Object.assign(cur, { name, ids: [...picked.l], wa: $("lWa").value.trim() });
   else db.lists.push({ id: uid(), name, ids: [...picked.l], wa: $("lWa").value.trim() });
   clearForm("l");
   renderAll();
+  toast(wasEdit ? "השינוי נשמר" : "הרשימה נשמרה");
 };
 $("tSave").onclick = () => {
   const title = $("tTitle").value.trim(), text = $("tText").value.trim();
   $("tErr").textContent = title && text ? "" : "צריך כותרת ונוסח.";
   if (!title || !text) return;
+  const wasEdit = !!editing.t;
   const cur = db.templates.find((x) => x.id === editing.t);
   if (cur) Object.assign(cur, { title, text });
   else db.templates.push({ id: uid(), title, text });
   clearForm("t");
   renderAll();
+  toast(wasEdit ? "השינוי נשמר" : "ההודעה נשמרה");
 };
 document.addEventListener("click", (e) => {
   const d = e.target.dataset;
   if (d.send) {
-    sendTo(db.schedules.find((x) => x.id === d.send), contact(d.c));
+    const c = contact(d.c);
+    sendTo(db.schedules.find((x) => x.id === d.send), c);
+    toast("וואטסאפ נפתח ל" + c.name);
   } else if (d.editC) {
     const c = contact(d.editC);
     $("cName").value = c.name; $("cPhone").value = "0" + c.phone.replace(/^972/, ""); $("cErr").textContent = "";
@@ -716,29 +843,36 @@ document.addEventListener("click", (e) => {
     const t = db.templates.find((x) => x.id === d.editT);
     $("tTitle").value = t.title; $("tText").value = t.text; $("tErr").textContent = "";
     setEdit("t", t.id); return;
-  } else if (d.bc) sendBroadcast(db.schedules.find((x) => x.id === d.bc));
+  } else if (d.bc) { sendBroadcast(db.schedules.find((x) => x.id === d.bc)); toast("ההודעה הועתקה, וואטסאפ נפתח"); }
   else if (d.vcf) { exportVcf(db.lists.find((x) => x.id === d.vcf)); return; }
-  else if (d.sms) sendSms(db.schedules.find((x) => x.id === d.sms));
+  else if (d.sms) { sendSms(db.schedules.find((x) => x.id === d.sms)); toast("אפליקציית ההודעות נפתחת"); }
   else if (d.ics) { addToCalendar(db.schedules.find((x) => x.id === d.ics)); return; }
   else if (d.gcal) { window.open(gcalUrl(db.schedules.find((x) => x.id === d.gcal)), "_blank"); return; }
-  else if (d.skip) finishOccurrence(db.schedules.find((x) => x.id === d.skip));
-  else if (d.delS) { if (!confirm("למחוק את התזמון?")) return; db.schedules = db.schedules.filter((x) => x.id !== d.delS); }
+  else if (d.skip) { finishOccurrence(db.schedules.find((x) => x.id === d.skip)); toast("דילגנו על הפעם הזאת"); }
+  else if (d.delS) { if (!confirm("למחוק את התזמון?")) return; db.schedules = db.schedules.filter((x) => x.id !== d.delS); toast("התזמון נמחק"); }
   else if (d.delC) {
     if (!confirm("למחוק את " + contact(d.delC).name + "?")) return;
     db.contacts = db.contacts.filter((x) => x.id !== d.delC);
     if (editing.c === d.delC) clearForm("c");
     Object.values(picked).forEach((set) => set.delete(d.delC));
+    toast("נמחק");
   }
-  else if (d.delL) { if (!confirm("למחוק את הרשימה?")) return; db.lists = db.lists.filter((x) => x.id !== d.delL); picked.sl.delete(d.delL); if (editing.l === d.delL) clearForm("l"); }
-  else if (d.delT) { if (!confirm("למחוק את ההודעה?")) return; db.templates = db.templates.filter((x) => x.id !== d.delT); if (editing.t === d.delT) clearForm("t"); }
+  else if (d.delL) { if (!confirm("למחוק את הרשימה?")) return; db.lists = db.lists.filter((x) => x.id !== d.delL); picked.sl.delete(d.delL); if (editing.l === d.delL) clearForm("l"); toast("הרשימה נמחקה"); }
+  else if (d.delT) { if (!confirm("למחוק את ההודעה?")) return; db.templates = db.templates.filter((x) => x.id !== d.delT); if (editing.t === d.delT) clearForm("t"); toast("ההודעה נמחקה"); }
   else if (d.tab) {
+    if (e.target.hasAttribute("aria-current")) { scrollTo({ top: 0, behavior: "smooth" }); return; }
     document.querySelectorAll("section").forEach((s) => (s.hidden = s.id !== "tab-" + d.tab));
     document.querySelectorAll("nav button").forEach((b) => b.toggleAttribute("aria-current", false));
     e.target.setAttribute("aria-current", "page");
+    moveNavBar();
     scrollTo(0, 0);
+    stagger($("tab-" + d.tab));
     return;
   } else return;
   renderAll();
+  // What is left of the card that was just used flashes once, so the eye lands on the next step.
+  const next = d.send && document.querySelector(`[data-due="${d.send}"]`);
+  if (next) play(next, "fresh");
 });
 
 // ---- sharing between colleagues: a copy travels as a code, phones are the identity ----
@@ -804,7 +938,7 @@ function importCode(code) {
   return n;
 }
 $("xCopy").onclick = async () => {
-  try { await navigator.clipboard.writeText(exportCode($("xSched").checked)); $("xMsg").textContent = "הקוד הועתק. מדביקים אותו בהודעה לקולגה."; }
+  try { await navigator.clipboard.writeText(exportCode($("xSched").checked)); $("xMsg").textContent = "הקוד הועתק. מדביקים אותו בהודעה לקולגה."; toast("הקוד הועתק"); }
   catch { $("xMsg").textContent = "ההעתקה נחסמה. אפשר להשתמש בכפתור שיתוף."; }
 };
 $("xShare").onclick = async () => {
@@ -829,6 +963,7 @@ $("iGo").onclick = async () => {
     $("iMsg").textContent = `נוספו ${n.contacts} אנשים, ${n.lists} רשימות, ${n.templates} הודעות ו-${n.schedules} תזמונים. מה שכבר היה אצלכם לא שוכפל.`;
     $("iCode").value = ""; $("iFile").value = "";
     renderAll();
+    toast("הייבוא הושלם");
   } catch { $("iMsg").textContent = "הקוד או הקובץ לא תקינים. כדאי לבקש מהקולגה לשלוח שוב."; }
 };
 
@@ -849,6 +984,9 @@ async function checkUpdate() {
   } catch {}
 }
 checkUpdate();
+moveNavBar();
+document.fonts?.ready.then(moveNavBar);
+stagger($("tab-home"));
 setInterval(renderHome, 30000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { renderHome(); checkUpdate(); } });
 </script>
