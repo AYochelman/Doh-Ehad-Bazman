@@ -205,7 +205,7 @@
 "use strict";
 const KEY = "wa-scheduler-v1";
 // Bump on every release: the app compares it with the copy on the server to offer an update.
-const VERSION = "12";
+const VERSION = "13";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -307,12 +307,38 @@ function icsFor(s) {
     "END:VEVENT", "END:VCALENDAR",
   ].join("\r\n");
 }
-function addToCalendar(s) {
+// An installed iPhone web app ignores file downloads, so the calendar file goes through the share sheet
+// where that exists, and falls back to a download elsewhere.
+async function addToCalendar(s) {
+  const ics = icsFor(s);
+  const file = new File([ics], "doh1-reminder.ics", { type: "text/calendar" });
+  try {
+    if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file] }); return; }
+  } catch (e) { if (e.name === "AbortError") return; }
   const a = document.createElement("a");
-  a.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(icsFor(s));
-  a.download = "doh1-reminder.ics";
+  a.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+  a.download = file.name;
   document.body.append(a); a.click(); a.remove();
 }
+// A plain link to Google Calendar's "new event" page: no file involved, so it works from an installed app too.
+function gcalUrl(s) {
+  const p2 = (n) => String(n).padStart(2, "0");
+  const local = (x) => `${x.getFullYear()}${p2(x.getMonth() + 1)}${p2(x.getDate())}T${p2(x.getHours())}${p2(x.getMinutes())}00`;
+  const start = new Date(s.next), end = new Date(s.next + 5 * 60000);
+  const rrule = icsFor(s).split("\r\n").find((l) => l.startsWith("RRULE:"));
+  const q = new URLSearchParams({
+    action: "TEMPLATE",
+    text: "דוח 1 בזמן: לשלוח ל" + recipients(s).map((c) => c.name).join(", ").slice(0, 80),
+    dates: local(start) + "/" + local(end),
+    ctz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    details: s.text + "\n\nלשליחה פותחים את האפליקציה: " + location.href.split(/[?#]/)[0],
+  });
+  if (rrule) q.set("recur", rrule);
+  return "https://calendar.google.com/calendar/render?" + q;
+}
+const calButtons = (id, primary) => `<div class="row" style="margin-top:10px">
+  <button ${primary ? 'class="primary"' : ""} data-gcal="${id}">תזכורת ביומן Google</button>
+  <button data-ics="${id}">תזכורת ביומן האייפון</button></div>`;
 
 // ---- pickers (chips) ----
 const picked = { s: new Set(), sl: new Set(), l: new Set() };
@@ -367,6 +393,8 @@ $("sFind").oninput = $("lFind").oninput = renderChips;
 
 // ---- render ----
 function renderHome() {
+  const okFor = db.schedules.find((x) => x.id === $("sOk").dataset.sid);
+  if (!okFor || okFor.done) $("sOk").hidden = true;
   const now = Date.now();
   const due = db.schedules.filter((s) => !s.done && s.next <= now);
   $("dueBox").innerHTML = due.map((s) => {
@@ -388,7 +416,7 @@ function renderHome() {
       <span class="muted">· ${esc(repeatLabel(s))} · ${r.length} נמענים</span></div>
       <button class="link" data-del-s="${s.id}">מחיקה</button></div>
       <div class="msg">${esc(s.text)}</div><div class="muted">${esc(r.map((c) => c.name).join(", "))}</div>
-      <button data-ics="${s.id}" style="margin-top:10px">תזכורת ביומן</button></div>`;
+      ${calButtons(s.id)}</div>`;
   }).join("") : '<div class="empty">אין הודעות מתוזמנות.</div>';
   $("log").innerHTML = db.log.length ? db.log.slice(0, 15).map((l) =>
     `<div class="card"><strong>${esc(l.name)}</strong> <span class="muted">${esc(fmt(l.t))}</span><div class="msg">${esc(l.text)}</div></div>`).join("")
@@ -581,12 +609,13 @@ $("sSave").onclick = () => {
   renderAll();
   const ok = $("sOk");
   ok.hidden = false;
+  ok.dataset.sid = s.id;
   if (s.next <= Date.now()) {
     ok.innerHTML = "<strong>נשמר, והזמן כבר הגיע.</strong> ההודעה מחכה למעלה תחת \"מוכן לשליחה\".";
     $("dueBox").scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
     ok.innerHTML = `<strong>התזמון נשמר ל-${esc(fmt(s.next))}.</strong><div class="muted">האפליקציה לא יכולה להתריע כשהיא סגורה. כדי לקבל התראה בזמן, מוסיפים תזכורת ליומן של הטלפון.</div>
-      <button class="primary" data-ics="${s.id}" style="margin-top:10px">הוספת תזכורת ליומן</button>`;
+      ${calButtons(s.id, true)}`;
   }
 };
 function sendTo(s, c) {
@@ -691,6 +720,7 @@ document.addEventListener("click", (e) => {
   else if (d.vcf) { exportVcf(db.lists.find((x) => x.id === d.vcf)); return; }
   else if (d.sms) sendSms(db.schedules.find((x) => x.id === d.sms));
   else if (d.ics) { addToCalendar(db.schedules.find((x) => x.id === d.ics)); return; }
+  else if (d.gcal) { window.open(gcalUrl(db.schedules.find((x) => x.id === d.gcal)), "_blank"); return; }
   else if (d.skip) finishOccurrence(db.schedules.find((x) => x.id === d.skip));
   else if (d.delS) { if (!confirm("למחוק את התזמון?")) return; db.schedules = db.schedules.filter((x) => x.id !== d.delS); }
   else if (d.delC) {
