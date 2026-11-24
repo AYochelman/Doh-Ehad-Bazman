@@ -56,8 +56,8 @@
   button.edit { border: 0; background: none; padding: 8px; text-decoration: underline; }
   button.link { border: 0; background: none; color: var(--danger); padding: 8px; min-height: 44px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { border-radius: 999px; padding: 6px 12px; min-height: 36px; font-size: .92rem; }
-  .chip[aria-pressed=true] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .chip, .daychip { border-radius: 999px; padding: 6px 12px; min-height: 36px; font-size: .92rem; }
+  .chip[aria-pressed=true], .daychip[aria-pressed=true] { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
   .empty { color: var(--muted); text-align: center; padding: 22px 8px; }
   nav {
     position: fixed; inset-inline: 0; bottom: 0; display: flex; background: var(--card);
@@ -95,10 +95,11 @@
       <div><label for="sRepeat">חזרה</label>
         <select id="sRepeat">
           <option value="once">חד פעמי</option><option value="daily">כל יום</option>
-          <option value="workdays">כל יום חוץ משישי ושבת</option>
+          <option value="days">בימים נבחרים בשבוע</option>
           <option value="weekly">כל שבוע</option><option value="monthly">כל חודש</option>
           <option value="yearly">כל שנה</option>
         </select></div>
+      <div id="sDaysBox" hidden><label>באילו ימים</label><div class="chips" id="sDays"></div></div>
     </div>
     <p class="muted" id="sErr" role="alert"></p>
     <div class="row">
@@ -247,13 +248,17 @@ function addContact(name, phone, errEl) {
 }
 
 // k-th occurrence counted from the anchor, so a monthly 31st stays the 31st where it exists.
-function occurrence(anchor, repeat, k) {
+const DAY = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
+const cleanDays = (v) => [...new Set((Array.isArray(v) ? v : []).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort();
+function occurrence(anchor, repeat, k, days) {
   const d = new Date(anchor);
-  if (repeat === "workdays") {
-    // Sunday to Thursday. An anchor on Friday or Saturday starts on the Sunday after it.
-    const weekend = () => d.getDay() === 5 || d.getDay() === 6;
-    while (weekend()) d.setDate(d.getDate() + 1);
-    for (let i = 0; i < k; i++) do d.setDate(d.getDate() + 1); while (weekend());
+  // "workdays" is the earlier fixed Sunday-to-Thursday choice; saved schedules may still carry it.
+  const on = repeat === "workdays" ? [0, 1, 2, 3, 4] : repeat === "days" ? cleanDays(days) : null;
+  if (on && on.length) {
+    // An anchor on a day that is not chosen starts on the next chosen day.
+    const off = () => !on.includes(d.getDay());
+    while (off()) d.setDate(d.getDate() + 1);
+    for (let i = 0; i < k; i++) do d.setDate(d.getDate() + 1); while (off());
   }
   else if (repeat === "daily") d.setDate(d.getDate() + k);
   else if (repeat === "weekly") d.setDate(d.getDate() + 7 * k);
@@ -273,11 +278,12 @@ function recipients(s) {
 function finishOccurrence(s) {
   s.sent = {};
   if (s.repeat === "once") { s.done = true; return; }
-  do { s.k++; s.next = occurrence(s.anchor, s.repeat, s.k); } while (s.next <= Date.now());
+  do { s.k++; s.next = occurrence(s.anchor, s.repeat, s.k, s.days); } while (s.next <= Date.now());
 }
 const fmt = (t) => new Date(t).toLocaleString("he-IL", { weekday: "short", day: "numeric", month: "numeric", year: "2-digit", hour: "2-digit", minute: "2-digit" });
-const REPEAT = { once: "חד פעמי", daily: "כל יום", workdays: "כל יום חוץ משישי ושבת", weekly: "כל שבוע", monthly: "כל חודש", yearly: "כל שנה" };
+const REPEAT = { once: "חד פעמי", daily: "כל יום", days: "בימים נבחרים", workdays: "כל יום חוץ משישי ושבת", weekly: "כל שבוע", monthly: "כל חודש", yearly: "כל שנה" };
 
+const repeatLabel = (s) => (s.repeat === "days" ? "בימים " + cleanDays(s.days).map((n) => DAY[n]).join(", ") : REPEAT[s.repeat]);
 // ---- calendar reminder: the only way to be alerted on an iPhone while the app is closed, without a server ----
 function icsFor(s) {
   const d = new Date(s.next), p2 = (n) => String(n).padStart(2, "0");
@@ -285,7 +291,8 @@ function icsFor(s) {
   const txt = (v) => v.replace(/\\/g, "\\\\").replace(/([,;])/g, "\\$1").replace(/\r?\n/g, "\\n");
   const names = recipients(s).map((c) => c.name).join(", ");
   const url = location.href.split("#")[0];
-  const rule = { daily: "DAILY", workdays: "WEEKLY;BYDAY=SU,MO,TU,WE,TH", weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" }[s.repeat];
+  const BY = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+  const rule = { daily: "DAILY", workdays: "WEEKLY;BYDAY=SU,MO,TU,WE,TH", days: "WEEKLY;BYDAY=" + cleanDays(s.days).map((n) => BY[n]).join(","), weekly: "WEEKLY", monthly: "MONTHLY", yearly: "YEARLY" }[s.repeat];
   return [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Doh 1 Bazman//HE", "BEGIN:VEVENT",
     "UID:" + s.id + "@doh-ehad-bazman", "DTSTAMP:" + local(new Date()), "DTSTART:" + local(d), "DURATION:PT5M",
@@ -375,7 +382,7 @@ function renderHome() {
   $("upcoming").innerHTML = up.length ? up.map((s) => {
     const r = recipients(s);
     return `<div class="card"><div class="row"><div class="grow"><strong>${esc(fmt(s.next))}</strong>
-      <span class="muted">· ${REPEAT[s.repeat]} · ${r.length} נמענים</span></div>
+      <span class="muted">· ${esc(repeatLabel(s))} · ${r.length} נמענים</span></div>
       <button class="link" data-del-s="${s.id}">מחיקה</button></div>
       <div class="msg">${esc(s.text)}</div><div class="muted">${esc(r.map((c) => c.name).join(", "))}</div>
       <button data-ics="${s.id}" style="margin-top:10px">תזכורת ביומן</button></div>`;
@@ -538,12 +545,32 @@ $("oSave").onclick = () => {
   $("oSave").hidden = !$("oRows").children.length;
   renderAll();
 };
+// ---- weekday picker for the "chosen days" repeat ----
+const pickedDays = new Set();
+function renderDays() {
+  $("sDaysBox").hidden = $("sRepeat").value !== "days";
+  $("sDays").innerHTML = DAY.map((d, n) => `<button type="button" class="daychip" data-day="${n}" aria-pressed="${pickedDays.has(n)}" aria-label="יום ${d}">${d}</button>`).join("");
+}
+$("sRepeat").onchange = () => {
+  // Start from the weekday of the chosen date, so "every Sunday" is one tap away.
+  const d = new Date($("sWhen").value);
+  if ($("sRepeat").value === "days" && !pickedDays.size && !isNaN(d)) pickedDays.add(d.getDay());
+  renderDays();
+};
+$("sDays").onclick = (e) => {
+  const n = Number(e.target.dataset.day);
+  if (!e.target.dataset.day) return;
+  pickedDays.has(n) ? pickedDays.delete(n) : pickedDays.add(n);
+  renderDays();
+};
 $("sTpl").onchange = () => { const t = db.templates.find((x) => x.id === $("sTpl").value); if (t) $("sText").value = t.text; };
 $("sSave").onclick = () => {
   const text = $("sText").value.trim(), when = new Date($("sWhen").value).getTime();
   const s = { id: uid(), text, to: [...picked.s], lists: [...picked.sl], repeat: $("sRepeat").value, anchor: when, next: when, k: 0, sent: {}, done: false };
-  if (when) s.next = occurrence(when, s.repeat, 0);
-  const err = !text ? "חסר נוסח להודעה." : !recipients(s).length ? "צריך לבחור לפחות נמען אחד." : !when ? "צריך לבחור תאריך ושעה." : "";
+  if (s.repeat === "days") s.days = [...pickedDays].sort();
+  if (when) s.next = occurrence(when, s.repeat, 0, s.days);
+  const err = !text ? "חסר נוסח להודעה." : !recipients(s).length ? "צריך לבחור לפחות נמען אחד." : !when ? "צריך לבחור תאריך ושעה."
+    : s.repeat === "days" && !s.days.length ? "צריך לבחור לפחות יום אחד בשבוע." : "";
   $("sErr").textContent = err;
   if (err) return;
   db.schedules.push(s);
@@ -690,7 +717,7 @@ function exportCode(withSchedules) {
     lists: db.lists.map((l) => ({ name: l.name, wa: l.wa || "", phones: l.ids.map(phone).filter(Boolean) })),
     templates: db.templates.map(({ title, text }) => ({ title, text })),
     schedules: !withSchedules ? [] : db.schedules.filter((x) => !x.done).map((x) => ({
-      text: x.text, repeat: x.repeat, anchor: x.anchor, phones: x.to.map(phone).filter(Boolean),
+      text: x.text, repeat: x.repeat, days: x.days, anchor: x.anchor, phones: x.to.map(phone).filter(Boolean),
       lists: x.lists.map((id) => db.lists.find((l) => l.id === id)?.name).filter(Boolean),
     })),
   };
@@ -731,9 +758,10 @@ function importCode(code) {
   });
   arr(data.schedules).forEach((x) => {
     const text = str(x?.text), anchor = Number(x?.anchor), repeat = REPEAT[x?.repeat] ? x.repeat : "";
-    if (!text || !repeat || !Number.isFinite(anchor)) return;
+    const days = cleanDays(x?.days);
+    if (!text || !repeat || !Number.isFinite(anchor) || (repeat === "days" && !days.length)) return;
     if (db.schedules.some((y) => y.text === text && y.anchor === anchor && y.repeat === repeat)) return;
-    const sc = { id: uid(), text, repeat, anchor, next: occurrence(anchor, repeat, 0), k: 0, sent: {}, done: false,
+    const sc = { id: uid(), text, repeat, days, anchor, next: occurrence(anchor, repeat, 0, days), k: 0, sent: {}, done: false,
       to: arr(x.phones).map((p) => idOf(p)).filter(Boolean),
       lists: arr(x.lists).map((name) => db.lists.find((l) => l.name === str(name))?.id).filter(Boolean) };
     if (sc.next <= Date.now()) { if (repeat === "once") return; finishOccurrence(sc); }
