@@ -285,19 +285,25 @@
     <h2 style="margin-top:0">לשלוח</h2>
     <label class="row" style="color:inherit"><input type="checkbox" id="xSched" style="width:auto"> לכלול גם את התזמונים</label>
     <div class="row" style="margin-top:10px">
-      <button class="primary" id="xShare">שיתוף הנתונים</button>
-      <button id="xCopy">העתקת קוד</button>
+      <button class="primary" id="xShare">שליחה לקולגה</button>
+      <button id="xCopy">העתקת ההודעה</button>
     </div>
+    <p class="muted" style="margin-top:10px">נשלחת הודעה רגילה, למשל בוואטסאפ, עם הסבר קצר לקולגה, קישור לאפליקציה והנתונים עצמם בסופה.</p>
     <p class="muted" id="xMsg" role="status"></p>
   </div>
   <div class="card">
     <h2 style="margin-top:0">לקבל</h2>
-    <label for="iCode">הדבקת הקוד שקיבלתם</label>
-    <textarea id="iCode" class="ltr"></textarea>
-    <label for="iFile">או בחירת הקובץ שקיבלתם</label>
-    <input id="iFile" type="file" accept=".txt,.json,text/plain,application/json">
+    <p class="muted" style="margin:0 0 10px">מעתיקים את ההודעה שקיבלתם מהקולגה, כולה, ולוחצים כאן.</p>
+    <button class="primary" id="iPaste">הדבקה וייבוא</button>
     <p class="muted" id="iMsg" role="status"></p>
-    <button class="primary" id="iGo">ייבוא הנתונים</button>
+    <details>
+      <summary>דרכים אחרות לייבא</summary>
+      <label for="iCode">הדבקה ידנית של ההודעה או הקוד</label>
+      <textarea id="iCode"></textarea>
+      <label for="iFile">או בחירת קובץ שקיבלתם</label>
+      <input id="iFile" type="file" accept=".txt,.json,text/plain,application/json">
+      <button id="iGo" style="margin-top:10px">ייבוא הנתונים</button>
+    </details>
   </div>
 </section>
 
@@ -324,7 +330,7 @@
 "use strict";
 const KEY = "wa-scheduler-v1";
 // Bump on every release: the app compares it with the copy on the server to offer an update.
-const VERSION = "19";
+const VERSION = "20";
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -368,7 +374,7 @@ function renderStoreWarn() {
   const msg = !storeOk
     ? "<strong>הדפדפן הזה לא שומר את הנתונים.</strong> כנראה גלישה פרטית. מה שתזינו יימחק כשהדף ייסגר."
     : !installed
-    ? "<strong>האפליקציה פתוחה בדפדפן, לא ממסך הבית.</strong> מה שמזינים כאן נשמר רק בדפדפן הזה ולא יופיע באפליקציה שעל מסך הבית. כדי להעביר נתונים: לשונית שיתוף, העתקת קוד, ואז ייבוא באפליקציה."
+    ? "<strong>האפליקציה פתוחה בדפדפן, לא ממסך הבית.</strong> מה שמזינים כאן נשמר רק בדפדפן הזה ולא יופיע באפליקציה שעל מסך הבית. כדי להעביר נתונים: בלשונית שיתוף לוחצים על העתקת ההודעה, ואז על הדבקה וייבוא באפליקציה."
     : "";
   el.hidden = !msg; el.innerHTML = msg;
 }
@@ -949,10 +955,10 @@ function exportCode(withSchedules) {
   return MARK + btoa(bin);
 }
 function importCode(code) {
-  code = code.trim();
-  const at = code.indexOf(MARK);
-  if (at < 0) throw new Error("bad");
-  const bin = atob(code.slice(at + MARK.length).replace(/\s+/g, ""));
+  // The code usually arrives inside a whole message; take just the code out of it.
+  const found = code.match(/D1Z1:([A-Za-z0-9+/=]+)/);
+  if (!found) throw new Error("bad");
+  const bin = atob(found[1]);
   const data = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))));
   const str = (v) => (typeof v === "string" ? v.trim().slice(0, 4000) : "");
   const arr = (v) => (Array.isArray(v) ? v : []);
@@ -993,34 +999,49 @@ function importCode(code) {
   db.contacts.sort((a, b) => a.name.localeCompare(b.name, "he"));
   return n;
 }
+// What a colleague receives: a normal message that says what this is and what to do, then the data.
+function shareMessage() {
+  return [
+    'קיבלת נתונים לאפליקציית "דוח 1 בזמן": אנשים, רשימות והודעות מוכנות.',
+    "",
+    "איך מייבאים:",
+    "1. מעתיקים את כל ההודעה הזאת.",
+    "2. פותחים את האפליקציה: " + BASE,
+    '3. בלשונית "שיתוף" לוחצים "הדבקה וייבוא".',
+    "",
+    exportCode($("xSched").checked),
+  ].join("\n");
+}
 $("xCopy").onclick = async () => {
-  try { await navigator.clipboard.writeText(exportCode($("xSched").checked)); $("xMsg").textContent = "הקוד הועתק. מדביקים אותו בהודעה לקולגה."; toast("הקוד הועתק"); }
-  catch { $("xMsg").textContent = "ההעתקה נחסמה. אפשר להשתמש בכפתור שיתוף."; }
+  try { await navigator.clipboard.writeText(shareMessage()); $("xMsg").textContent = "ההודעה הועתקה. מדביקים אותה בשיחה עם הקולגה."; toast("ההודעה הועתקה"); }
+  catch { $("xMsg").textContent = "ההעתקה נחסמה. אפשר להשתמש בכפתור השליחה."; }
 };
 $("xShare").onclick = async () => {
-  const code = exportCode($("xSched").checked);
-  const file = new File([code], "דוח-1-בזמן.txt", { type: "text/plain" });
+  const text = shareMessage();
   try {
-    if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: "דוח 1 בזמן" });
-    else if (navigator.share) await navigator.share({ text: code, title: "דוח 1 בזמן" });
-    else {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(file); a.download = file.name; a.click();
-      $("xMsg").textContent = "הקובץ ירד. שולחים אותו לקולגה.";
-    }
-  } catch (e) { if (e.name !== "AbortError") $("xMsg").textContent = "השיתוף נכשל. אפשר להשתמש בהעתקת קוד."; }
+    if (navigator.share) await navigator.share({ text });
+    else { await navigator.clipboard.writeText(text); $("xMsg").textContent = "ההודעה הועתקה. מדביקים אותה בשיחה עם הקולגה."; toast("ההודעה הועתקה"); }
+  } catch (e) { if (e.name !== "AbortError") $("xMsg").textContent = "השליחה נכשלה. אפשר להשתמש בהעתקת ההודעה."; }
 };
-$("iGo").onclick = async () => {
-  const f = $("iFile").files[0];
+function runImport(code) {
+  if (!code.trim()) { $("iMsg").textContent = "לא נמצא מה לייבא. מעתיקים קודם את ההודעה מהקולגה."; return; }
   try {
-    const code = f ? await f.text() : $("iCode").value;
-    if (!code.trim()) { $("iMsg").textContent = "צריך להדביק קוד או לבחור קובץ."; return; }
     const n = importCode(code);
     $("iMsg").textContent = `נוספו ${n.contacts} אנשים, ${n.lists} רשימות, ${n.templates} הודעות ו-${n.schedules} תזמונים. מה שכבר היה אצלכם לא שוכפל.`;
     $("iCode").value = ""; $("iFile").value = "";
     renderAll();
     toast("הייבוא הושלם");
-  } catch { $("iMsg").textContent = "הקוד או הקובץ לא תקינים. כדאי לבקש מהקולגה לשלוח שוב."; }
+  } catch { $("iMsg").textContent = "לא נמצאו נתונים בהודעה. בודקים שהועתקה כל ההודעה, עד הסוף."; }
+}
+$("iPaste").onclick = async () => {
+  let text = "";
+  try { text = await navigator.clipboard.readText(); }
+  catch { $("iMsg").textContent = "הדפדפן לא נתן לקרוא את מה שהועתק. פותחים \"דרכים אחרות לייבא\" ומדביקים שם."; return; }
+  runImport(text);
+};
+$("iGo").onclick = async () => {
+  const f = $("iFile").files[0];
+  runImport(f ? await f.text() : $("iCode").value);
 };
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -1052,7 +1073,7 @@ const TOUR = [
   { tab: "people", el: "#tab-people .card", t: "אנשים", p: "מוסיפים שם ומספר, גם אם המספר לא שמור בטלפון. אפשר להדביק רשימה או לייבא מצילום מסך." },
   { tab: "lists", el: "#tab-lists .card", t: "רשימות", p: "מקבצים אנשים לרשימה, למשל מחלקה, כדי לבחור את כולם בלחיצה." },
   { tab: "tpl", el: "#tab-tpl .card", t: "הודעות מוכנות", p: "שומרים נוסחים שחוזרים על עצמם. {שם} בנוסח מתחלף בשם הנמען." },
-  { tab: "share", el: "#tab-share .card", t: "שיתוף וגיבוי", p: "מעבירים לקולגה את האנשים, הרשימות וההודעות. אותו קוד משמש גם כגיבוי שלכם." },
+  { tab: "share", el: "#tab-share .card", t: "שיתוף וגיבוי", p: "שולחים לקולגה הודעה עם האנשים, הרשימות וההודעות, והוא מייבא אותה בלחיצה. אותה הודעה משמשת גם כגיבוי שלכם." },
   { tab: "home", el: "#reload", t: "רענון", p: "טוען את הגרסה העדכנית של האפליקציה. הנתונים שלכם נשארים." },
 ];
 let tourAt = -1;
